@@ -1,0 +1,50 @@
+data/
+
+# Some Other File/Folder
+Info.txt
+data-output
+*.json
+run.sh
+.env
+airflow-entrypoint.sh
+
+.vscode/
+*.docx
+crypto_price_dag.py
+Some_Code.py
+
+# Python bytecode files
+*.pyc
+*.pyo
+__pycache__/
+
+# Jupyter Notebooks checkpoints
+notebooks/*.ipynb
+.ipynb_checkpoints/
+*.ipynb
+
+# Docker-related files
+docker-compose.override.yml
+*.log
+*.bak
+*.swp
+
+# Ignore the jars and driver folder     
+./jars/*.jar
+*.jar
+jars/
+
+
+# Airflow files
+airflow.db
+airflow-logs/
+
+# MinIO / S3 data 
+minio_data/
+
+# Postgres data 
+postgres_data/
+
+
+.env 
+.env 

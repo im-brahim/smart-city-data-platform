@@ -1,0 +1,110 @@
+services:
+
+  master:
+    build:
+        context: .
+        dockerfile: Dockerfile   
+    image: my-spark:custom
+    container_name: master
+    hostname: master
+    environment:
+      - SPARK_MODE=master
+      - SPARK_MASTER_MEMORY=1g
+      - SPARK_EXTRA_CLASSPATH=/opt/spark/jars/*
+    env_file:
+      - .env
+    ports:
+      - "8080:8080"
+      - "7077:7077"
+    networks:
+      - etl-network
+    volumes:
+      # - ./jars:/opt/spark/jars
+      - ./jobs:/opt/spark/jobs
+
+  worker:
+    build:
+        context: .
+        dockerfile: Dockerfile   
+    image: my-spark:custom
+    container_name: worker
+    hostname: worker
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://master:7077
+      - SPARK_WORKER_MEMORY=1G
+      - SPARK_WORKER_CORES=1
+    env_file:
+      - .env
+    ports:
+      - "8082:8081"
+    depends_on:
+      - master
+    volumes:
+      - ./jobs:/opt/spark/jobs
+      # - ./jars:/opt/spark/jars
+    networks:
+      - etl-network
+
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    env_file:
+      - .env
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ACCESS_KEY}
+      - MINIO_ROOT_PASSWORD=${MINIO_SECRET_KEY}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - etl-network
+
+  airflow:
+    image: apache/airflow:2.7.2-python3.9
+    container_name: airflow
+    ports:
+      - "8081:8080"
+    env_file:
+      - .env
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
+      - AIRFLOW__CORE__FERNET_KEY=OKX45Jr7vUpjKlmp0Y/Oj/sNGzshXOe17GrNMkDLQYE=
+      - AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION=False
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./data:/opt/airflow/data
+      - ./airflow.db:/opt/airflow/airflow.db
+      - ./airflow-entrypoint.sh:/opt/airflow/airflow-entrypoint.sh
+      - /var/run/docker.sock:/var/run/docker.sock   
+    networks:
+      - etl-network
+    command: bash -c "pip install -r /opt/airflow/dags/requirements.txt && bash /opt/airflow/airflow-entrypoint.sh"
+              
+  postgres:
+    image: postgres:13
+    container_name: postgres
+    ports:
+      - "5433:5432"
+    environment:
+      - POSTGRES_USER=airflow
+      - POSTGRES_PASSWORD=airflow
+      - POSTGRES_DB=airflow
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - etl-network
+
+
+volumes:
+  minio_data:
+  postgres_data:
+
+networks:
+  etl-network:
+    driver: bridge
