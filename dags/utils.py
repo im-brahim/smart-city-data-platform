@@ -59,7 +59,7 @@ def append_json_line_loccaly(file_path: str, data: dict) -> None:
         file_path: Local path to the file where the JSON line will be appended.
         data: Dictionary to be appended as a JSON line.
     '''
-    os.makedirs(os.path.dirname(file_path), exist_ok=True)  # Ensure the directory exists
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)  # Ensure the directory exists or create it if not
     with open(file_path, "a") as f:
         f.write(json.dumps(data) + "\n")   
         
@@ -74,9 +74,6 @@ def upload_to_minio_directly(data: dict, bucket_name: str, object_name: str) -> 
         bucket_name: Target MinIO bucket.
         object_name: Destination path in bucket.
         logger: Logger instance.
-
-    Important transform before save: 
-        dict  →  JSON string  →  bytes  →  stored in MinIO
     """
     logger = get_logger("UPLOAD DATA TO MINIO")
 
@@ -88,7 +85,10 @@ def upload_to_minio_directly(data: dict, bucket_name: str, object_name: str) -> 
         region_name='us-east-1',
     )
     try:
-        json_bytes =    json.dumps(data).encode('utf-8')
+        # Important transform before save: 
+        # dict  →  JSON string  →  bytes  →  stored in MinIO
+        json_bytes = json.dumps(data).encode('utf-8')
+        
         s3_client.put_object(
             Bucket = bucket_name,               # Args Must be started with Maj Alphapetic
             Key = object_name,
@@ -100,7 +100,7 @@ def upload_to_minio_directly(data: dict, bucket_name: str, object_name: str) -> 
         return
 
 
-def append_json_line_minio(data , bucket_name: str) -> None:
+def append_json_line_minio(data , bucket_name: str, path) -> None:
     '''
     Function That get The JSON File From MinIO and Append to it The New data recieving from the API.
     Args:
@@ -108,16 +108,15 @@ def append_json_line_minio(data , bucket_name: str) -> None:
     '''
     logger = get_logger("Append JSON Line in MinIO ")
     try:
-        '''
-        ( json.dumps(data)+ "\n" )     :  dict → string: '{"temp": 15.19, ...}' and then add newline
-        .encode("utf-8")     :  string → bytes: b'{"temp": 15.19, ...}\n'
-        '''
+        
+        # Get the Data from Minio ... --> Append NewLine --> Upload it Back
+
+        # ( json.dumps(data)+ "\n" )  :  dict → string: '{"temp": 15.19, ...}' and then add newline
+        # .encode("utf-8")            :  string → bytes: b'{"temp": 15.19, ...}\n'
         newLine = (json.dumps(data)+"\n").encode("utf-8")
 
 
 
-
-
-        logger.info(f"✅ Uploaded directly to MinIO: {bucket_name}/{object_name}")
+        logger.info(f"✅ Uploaded directly to MinIO: {path}")
     except Exception as e:
         logger.error(f"Failed to upload to MinIO: {e}", exc_info=True)
