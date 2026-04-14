@@ -35,9 +35,9 @@ def fetch_and_save():
     """
     
     url = os.getenv("WEATHER_API")
-    EXCHANGE_API_URL = "https://open.er-api.com/v6/latest/USD"
+
     try:
-        res = requests.get(EXCHANGE_API_URL)
+        res = requests.get(url)
         res.raise_for_status()  # Raise an exception for HTTP errors
         data = res.json()
         
