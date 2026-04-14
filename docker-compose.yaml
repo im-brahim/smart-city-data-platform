@@ -3,7 +3,7 @@ services:
   master:
     build:
         context: .
-        dockerfile: Dockerfile   
+        dockerfile: Dockerfile
     image: my-spark:custom
     container_name: master
     hostname: master
@@ -19,7 +19,7 @@ services:
     networks:
       - etl-network
     volumes:
-      # - ./jars:/opt/spark/jars
+      - ./jars:/opt/spark/jars
       - ./jobs:/opt/spark/jobs
 
   worker:
@@ -42,7 +42,7 @@ services:
       - master
     volumes:
       - ./jobs:/opt/spark/jobs
-      # - ./jars:/opt/spark/jars
+      - ./jars:/opt/spark/jars
     networks:
       - etl-network
 
