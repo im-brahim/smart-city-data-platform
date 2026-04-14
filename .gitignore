@@ -1,17 +1,19 @@
-data/
-
-# Some Other File/Folder
+# Other File/Folder
+.vscode/
 Info.txt
-data-output
+*.docx
 *.json
-run.sh
+data-output
+data/
+LEARNING_LOG.md
+COACH_CONTEXT.md
+test.py
+
+
+# Secrets & Setting Files
 .env
 airflow-entrypoint.sh
-
-.vscode/
-*.docx
-crypto_price_dag.py
-Some_Code.py
+run.sh
 
 # Python bytecode files
 *.pyc
