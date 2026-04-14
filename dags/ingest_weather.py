@@ -7,7 +7,8 @@ import requests
 from dotenv import load_dotenv # type: ignore
 
 from utils import (
-    upload_to_minio, upload_to_minio_directly, append_json_line, get_logger, WEATHER_LOCAL_PATH
+    upload_to_minio_directly, get_logger,
+    SMART_CITY_BUCKET, MINIO_WEATHER_RAW_PATH
 )
 
 load_dotenv()
@@ -21,29 +22,42 @@ default_args = {
 }
 
 def fetch_and_save():
+    
+    """
+    Save a single JSON record directly to MinIO as a new object.
+    Each call creates a new file — no appending, no rewriting.
+    
+    Args:
+        data: Dictionary to serialize and save.
+        bucket_name: Target MinIO bucket.
+        object_name: Unique destination path (include timestamp in name).
+        logger: Logger instance.
+    """
+    
     url = os.getenv("WEATHER_API")
+    EXCHANGE_API_URL = "https://open.er-api.com/v6/latest/USD"
     try:
-        res = requests.get(url)
+        res = requests.get(EXCHANGE_API_URL)
         res.raise_for_status()  # Raise an exception for HTTP errors
         data = res.json()
-
-        # Add timestamp
-        # data["timestamp"] = datetime.utcnow().isoformat() # tiemstamp is existe in api repons
-
-        # Append as a new line (JSONL style)
-        file_path = WEATHER_LOCAL_PATH
-        append_json_line(file_path, data)
-
+        
         try:
-            # Upload to MinIO
-            # upload_to_minio(file_path, "weather", "casablanca.json", logger)
-            upload_to_minio_directly(data, "weather", "casablanca.json", logger)
+            # Upload to Minio in sepat
+            timestamp = datetime.utcnow().strftime("%Y-%m-%dT%H-%M-%S")
+            path = MINIO_WEATHER_RAW_PATH
+            object_name = f"{path}{timestamp}.json"
+            
+            upload_to_minio_directly(data, SMART_CITY_BUCKET, object_name)      
+
+            logger.info(f"Data Uploaded To MinIO Succesfully: {object_name}")
         except Exception as e:
             logger.error(f"---------Not upload to Minio: {e}", exc_info=True)
-
+            return
+    
     except requests.exceptions.RequestException as e:
-        logger.error(f"Error: {e}", exc_info=True)
-
+        logger.error(f"Not get Data From API: {e}", exc_info=True)
+        
+    
 with DAG(
     dag_id="ingest_weather_casablanca",
     default_args=default_args,
