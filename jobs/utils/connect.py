@@ -1,7 +1,9 @@
+# TO DO: PEP8 
 from pyspark.sql import SparkSession # type: ignore
 import logging
 from dotenv import load_dotenv  # type: ignore
 import os
+from utils.config import SPARK_MASTER
 
 load_dotenv()
 
@@ -9,9 +11,10 @@ def get_logger(name):
     logging.basicConfig(level=logging.INFO)
     return logging.getLogger(name)
 
-def create_spark_session(app_name="Crypto ETL Pipeline" , use_minio = True):
+def create_spark_session(app_name , use_minio = True):  # app_name = "Crypto ETL Pipeline"
     """Create a Spark session with appropriate configurations"""
-    builder = SparkSession.builder.appName(app_name).master(os.getenv("SPARK_MASTER"))
+    # spark_master = os.getenv("SPARK_MASTER")
+    builder = SparkSession.builder.appName(app_name).master("spark://master:7077")
     if use_minio:
         builder = builder \
             .config("spark.hadoop.fs.s3a.endpoint", os.getenv("MINIO_ENDPOINT")) \
