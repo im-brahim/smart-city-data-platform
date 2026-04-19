@@ -3,14 +3,13 @@ Data quality validation for Smart City pipeline.
 Validates weather and traffic DataFrames before
 they are saved to PostgreSQL.
 """
-# Standard library
-import logging
 
-# Third party
 from pyspark.sql import DataFrame
 from pyspark.sql.functions import col
 
-logger = logging.getLogger(__name__)
+from utils.connect import get_logger
+
+logger = get_logger("validate_data")
 
 
 def validate_no_nulls(df: DataFrame, critical_columns: list) -> bool:
@@ -142,7 +141,7 @@ def run_validation(df: DataFrame, source: str) -> bool:
         if not validate_realistic_values(df, 'currentSpeed',  min_speed , max_speed):
             is_valid = False
         
-        logger.info("---------- Checking Realistic Values in TRAFFIC for CURRENTSPEED ... ------------------ ")
+        logger.info("---------- Checking Realistic Values in TRAFFIC for CONFIDENCE ... ------------------ ")
         if not validate_realistic_values(df, 'confidence',  min_confidence , max_confidence):
             is_valid = False
     

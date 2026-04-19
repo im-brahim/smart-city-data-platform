@@ -1,10 +1,6 @@
 services:
 
   master:
-    # build:
-    #     context: .
-    #     dockerfile: Dockerfile
-    # image: my-spark:custom
     image: ibrahimelaidouni/my-custom-spark:3.5.0
     container_name: master
     hostname: master
@@ -24,10 +20,6 @@ services:
       - ./jobs:/opt/spark/jobs
 
   worker:
-    # build:
-    #     context: .
-    #     dockerfile: Dockerfile   
-    # image: my-spark:custom
     image: ibrahimelaidouni/my-custom-spark:3.5.0
     container_name: worker
     hostname: worker
@@ -45,6 +37,7 @@ services:
     volumes:
       - ./jobs:/opt/spark/jobs
       - ./jars:/opt/spark/jars
+
     networks:
       - etl-network
 
@@ -81,8 +74,8 @@ services:
     volumes:
       - ./dags:/opt/airflow/dags
       - ./data:/opt/airflow/data
-      # - ./airflow.db:/opt/airflow/airflow.db      # This is for SQLite and not For Postgres
-      - ./airflow-entrypoint.sh:/opt/airflow/airflow-entrypoint.sh
+      # - ./airflow.db:/opt/airflow/airflow.db      # To use SQLite instead Postgres for airflow metadata storage
+      - ./airflow-entrypoint.sh:/opt/airflow/airflow-entrypoint.sh 
       - /var/run/docker.sock:/var/run/docker.sock   
     networks:
       - etl-network
@@ -94,13 +87,11 @@ services:
     ports:
       - "5433:5432"
     environment:
-      - POSTGRES_USER=ibrahim           # Changing the user, password and DB name
-      - POSTGRES_PASSWORD=ibrahim
-      # - POSTGRES_DB=smartcity
-      # - POSTGRES_D
+      - POSTGRES_USER=${DB_USER}           
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql   # Mount init script
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql   # Mounting init script
     networks:
       - etl-network
 

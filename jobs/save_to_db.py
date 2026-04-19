@@ -1,17 +1,18 @@
-from pyspark.sql.utils import AnalysisException # type: ignore
 from dotenv import load_dotenv #type:ignore
+from pyspark.sql.utils import AnalysisException # type: ignore
 
-from utils.data_io import read_parquet_from_minio, save_only_new_rows
-from utils.connect import create_spark_session, get_logger
+from utils.data_io import (
+    read_parquet_from_minio, 
+    save_only_new_rows,
+)
 from utils.config import (
     MINIO_TRAFFIC_PROCESSED_PATH,
     MINIO_WEATHER_PROCESSED_PATH,
     SMART_CITY_BUCKET,
     DB_WEATHER_TABLE,
     DB_TRAFFIC_TABLE,
-    DB_AGGREGATED_TABLE
 )
-
+from utils.connect import create_spark_session,  get_logger
 load_dotenv()
 
 def main():

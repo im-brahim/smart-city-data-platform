@@ -12,8 +12,6 @@ test.py
 
 # Secrets & Setting Files
 .env
-airflow-entrypoint.sh
-run.sh
 
 # Python bytecode files
 *.pyc

@@ -3,7 +3,7 @@ import os
 from dotenv import load_dotenv  # type: ignore
 
 load_dotenv()
-
+    
 
 def read_json_from_minio(spark: "SparkSession", path: str):
     """
@@ -99,7 +99,6 @@ def save_in_db(data: "DataFrame", DB_TABLE: str) -> None:
 
 
 def save_only_new_rows(spark, data: "DataFrame", DB_TABLE: str) -> None:
-    # 1. Load existing keys (e.g., 'id') from the database
     """
     Read the data from PostgreSQL Table .
 
@@ -126,13 +125,5 @@ def save_only_new_rows(spark, data: "DataFrame", DB_TABLE: str) -> None:
         new_data = data
 
     # 3. Append only the new rows
-    (
-        new_data.write.format("jdbc")
-        .option("url", os.getenv("DB_URL"))
-        .option("dbtable", DB_TABLE)
-        .option("user", os.getenv("DB_USER"))
-        .option("password", os.getenv("DB_PASSWORD"))
-        .option("driver", os.getenv("DB_DRIVER"))
-        .mode("append")
-        .save()
-    )
+    save_in_db(new_data, DB_TABLE)
+    
