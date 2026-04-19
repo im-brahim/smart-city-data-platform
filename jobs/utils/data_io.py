@@ -1,7 +1,6 @@
 import os
 
 from dotenv import load_dotenv  # type: ignore
-from pyspark.errors import AnalysisException
 
 load_dotenv()
 
@@ -58,10 +57,9 @@ def save_parquet_to_minio(data: "DataFrame", path: str) -> None:
      
 
 
-
 def read_from_db(spark: "SparkSession") -> "DataFrame":
     """
-    Read the crypto prices table from PostgreSQL.
+    Read the data from PostgreSQL TABLE
 
     Args:
         spark: Active SparkSession instance.
@@ -90,6 +88,46 @@ def save_in_db(data: "DataFrame", DB_TABLE: str) -> None:
     """
     (
         data.write.format("jdbc")
+        .option("url", os.getenv("DB_URL"))
+        .option("dbtable", DB_TABLE)
+        .option("user", os.getenv("DB_USER"))
+        .option("password", os.getenv("DB_PASSWORD"))
+        .option("driver", os.getenv("DB_DRIVER"))
+        .mode("append")
+        .save()
+    )
+
+
+def save_only_new_rows(spark, data: "DataFrame", DB_TABLE: str) -> None:
+    # 1. Load existing keys (e.g., 'id') from the database
+    """
+    Read the data from PostgreSQL Table .
+
+    Args:
+        spark: Active SparkSession instance.
+        data: the new data that will append.
+        DB_TABLE: the table where be data load
+    """
+    try:
+        existing_df = (
+            spark.read.format("jdbc")
+            .option("url", os.getenv("DB_URL"))
+            .option("dbtable", f"(SELECT ingested_at FROM {DB_TABLE}) as sub") # Only read IDs to save memory
+            .option("user", os.getenv("DB_USER"))
+            .option("password", os.getenv("DB_PASSWORD"))
+            .option("driver", os.getenv("DB_DRIVER"))
+            .load()
+        )
+
+        # 2. Keep only rows that are NOT in the existing table
+        new_data = data.join(existing_df, on="ingested_at", how="left_anti")
+    
+    except Exception:
+        new_data = data
+
+    # 3. Append only the new rows
+    (
+        new_data.write.format("jdbc")
         .option("url", os.getenv("DB_URL"))
         .option("dbtable", DB_TABLE)
         .option("user", os.getenv("DB_USER"))

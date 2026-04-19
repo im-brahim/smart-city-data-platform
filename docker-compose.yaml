@@ -1,10 +1,11 @@
 services:
 
   master:
-    build:
-        context: .
-        dockerfile: Dockerfile
-    image: my-spark:custom
+    # build:
+    #     context: .
+    #     dockerfile: Dockerfile
+    # image: my-spark:custom
+    image: ibrahimelaidouni/my-custom-spark:3.5.0
     container_name: master
     hostname: master
     environment:
@@ -23,10 +24,11 @@ services:
       - ./jobs:/opt/spark/jobs
 
   worker:
-    build:
-        context: .
-        dockerfile: Dockerfile   
-    image: my-spark:custom
+    # build:
+    #     context: .
+    #     dockerfile: Dockerfile   
+    # image: my-spark:custom
+    image: ibrahimelaidouni/my-custom-spark:3.5.0
     container_name: worker
     hostname: worker
     environment:
@@ -72,14 +74,14 @@ services:
       - .env
     environment:
       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
-      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
+      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://ibrahim:ibrahim@postgres/airflow
       - AIRFLOW__CORE__FERNET_KEY=OKX45Jr7vUpjKlmp0Y/Oj/sNGzshXOe17GrNMkDLQYE=
       - AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION=False
       - AIRFLOW__CORE__LOAD_EXAMPLES=False
     volumes:
       - ./dags:/opt/airflow/dags
       - ./data:/opt/airflow/data
-      - ./airflow.db:/opt/airflow/airflow.db
+      # - ./airflow.db:/opt/airflow/airflow.db      # This is for SQLite and not For Postgres
       - ./airflow-entrypoint.sh:/opt/airflow/airflow-entrypoint.sh
       - /var/run/docker.sock:/var/run/docker.sock   
     networks:
@@ -92,11 +94,13 @@ services:
     ports:
       - "5433:5432"
     environment:
-      - POSTGRES_USER=airflow
-      - POSTGRES_PASSWORD=airflow
-      - POSTGRES_DB=airflow
+      - POSTGRES_USER=ibrahim           # Changing the user, password and DB name
+      - POSTGRES_PASSWORD=ibrahim
+      # - POSTGRES_DB=smartcity
+      # - POSTGRES_D
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql   # Mount init script
     networks:
       - etl-network
 

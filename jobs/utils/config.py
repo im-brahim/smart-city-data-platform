@@ -18,25 +18,25 @@ MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "minio")
 MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY") 
 
 # MinIO: Configuration BUCKET:
-MINIO_JSON_BUCKET = "casablanca"
-MINIO_PROCESSED_BUCKET = "casablanca_processed"
+SMART_CITY_BUCKET = "casablanca"
 
 # MinIO: Configuration PATH For Weather: 
-MINIO_WEATHER_JSON_PATH = "s3a://casablanca/weather/raw/casablanca.json"
-MINIO_WEATHER_PROCESSED_PATH = "s3a://casablanca/weather/processed/"
+MINIO_WEATHER_RAW_PATH = "weather/raw/"
+MINIO_WEATHER_PROCESSED_PATH = "weather/processed/"
 
 # MinIO: Configuration PATH For Traffic:
-MINIO_TRAFFIC_JSON_PATH = "s3a://casablanca/traffic/raw/casablanca.json"
-MINIO_TRAFFIC_PROCESSED_PATH = "s3a://casablanca/traffic/processed/"
+MINIO_TRAFFIC_RAW_PATH = "traffic/raw/"
+MINIO_TRAFFIC_PROCESSED_PATH = "traffic/processed/"
 
 # DATABASE: CONFIGURATION:
-DB_URL = os.getenv("DB_URL", "jdbc:postgresql://postgres:5432/airflow")
+DB_URL = os.getenv("DB_URL", "jdbc:postgresql://postgres:5432/smartcity")
 DB_USER = os.getenv("DB_USER")
 DB_PASSWORD = os.getenv("DB_PASSWORD")  
 DB_DRIVER = "org.postgresql.Driver"
+
 # DATABASE: TABLES
-DB_WEATHER_TABLE = "weather_data"
-DB_TRAFFIC_TABLE = "traffic_data"
+DB_WEATHER_TABLE = "weather"
+DB_TRAFFIC_TABLE = "traffic"
 DB_AGGREGATED_TABLE = "aggregated_data"
 
 # Local (containers using mount volume) paths for Saving traffic and weather data

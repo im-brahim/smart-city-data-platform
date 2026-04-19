@@ -41,12 +41,18 @@ def fetch_and_save():
         res.raise_for_status()  # Raise an exception for HTTP errors
         data = res.json()
         
-        try:
-            # Upload to Minio in sepat
-            timestamp = datetime.utcnow().strftime("%Y-%m-%dT%H-%M-%S")
-            path = MINIO_WEATHER_RAW_PATH
-            object_name = f"{path}{timestamp}.json"
+        try:            
             
+            now = datetime.utcnow()
+            file_timestamp = now.strftime("%Y-%m-%dT%H-%M-%S")   # for the filename
+            ingested_at = now.strftime("%Y-%m-%dT%H:%M:%S")       # for the data field
+
+            # ADD the ingestion timestamp to the DATA before loading it to MinIO
+            data["ingested_at"] = ingested_at  
+            
+            path = MINIO_WEATHER_RAW_PATH
+            object_name = f"{path}{file_timestamp}.json"
+
             upload_to_minio_directly(data, SMART_CITY_BUCKET, object_name)      
 
             logger.info(f"Data Uploaded To MinIO Succesfully: {object_name}")

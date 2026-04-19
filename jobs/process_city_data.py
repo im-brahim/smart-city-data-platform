@@ -16,10 +16,17 @@ from utils.data_io import (
     read_json_from_minio,
     save_parquet_to_minio
 )
+from utils.config import (
+    SMART_CITY_BUCKET,
+    MINIO_TRAFFIC_RAW_PATH,
+    MINIO_WEATHER_RAW_PATH,
+    MINIO_WEATHER_PROCESSED_PATH,
+    MINIO_TRAFFIC_PROCESSED_PATH
+)
 
 from validate_data import run_validation
 
-
+# WEATHER PROCESSING
 def flatten_weather(df):
     """
     Flatten nested weather JSON into a clean DataFrame.
@@ -31,6 +38,7 @@ def flatten_weather(df):
         Flattened DataFrame with selected columns.
     """
     return df.select(
+        col("ingested_at").cast("timestamp").alias("ingested_at"),
         col("dt").cast("timestamp").alias("timestamp"),
         col("main.temp").alias("temp"),
         col("main.humidity").alias("humidity"),
@@ -41,7 +49,7 @@ def flatten_weather(df):
         col("coord.lon").alias("longitude")
     )
 
-
+# TRAFFIC PROCESSING
 def flatten_traffic(df):
     """
     Flatten nested traffic JSON into a clean DataFrame.
@@ -54,7 +62,7 @@ def flatten_traffic(df):
         including derived congestion_ratio.
     """
     return df.select(
-        col("timestamp").cast("timestamp").alias("timestamp"),
+        col("ingested_at").cast("timestamp").alias("ingested_at"),
         col("flowSegmentData.currentSpeed").alias("currentSpeed"),
         col("flowSegmentData.freeFlowSpeed").alias("freeFlowSpeed"),
         col("flowSegmentData.currentTravelTime").alias("currentTravelTime"),
@@ -73,35 +81,39 @@ def main():
     load_dotenv()
     logger = get_logger("Process Weather & Traffic")
     spark = create_spark_session("SmartCity ETL", use_minio=True)
+    
     # ---------- WEATHER -----------------------
+    # try:
+    #     s3_weather_path =  f"s3a://{SMART_CITY_BUCKET}/{MINIO_WEATHER_RAW_PATH}"
+    #     raw_weather = read_json_from_minio(spark, s3_weather_path)
+    #     weather_df = flatten_weather(raw_weather)
+    #     logger.info(f"✅ Weather flattened : {weather_df.count()} rows")
+    # except AnalysisException as e:
+    #     logger.error("Failed To Read Weather Data From MinIO", exc_info=True)
+    #     spark.stop()
+    #     return
 
-    try:
-        s3_weather_path = os.getenv("MINIO_WEATHER_JSON_PATH")
-        raw_weather = read_json_from_minio(spark, s3_weather_path)
-        weather_df = flatten_weather(raw_weather)
-        logger.info(f"✅ Weather flattened: {weather_df.count()} rows")
-    except AnalysisException as e:
-        logger.error("Failed to read weather data", exc_info=True)
-        spark.stop()
-        return
+    # # Validate weather
+    # if not run_validation(weather_df, "weather"):
+    #     logger.warning(" ⚠️ Weather data failed validation — skipping save")
+    # else:
+        
+    #     df_check = spark.read.parquet(f"s3a://{SMART_CITY_BUCKET}/{MINIO_WEATHER_PROCESSED_PATH}")
+    #     df_check.printSchema()
+    #     df_check.show(5, truncate=False)
 
-    # Validate weather
-    if not run_validation(weather_df, "weather"):
-        logger.warning("⚠️ Weather data failed validation — skipping save")
-    else:
-        save_parquet_to_minio(weather_df, os.getenv("MINIO_WEATHER_PROCESSED_PATH"))
-        logger.info("✅ Weather saved to MinIO Silver layer")
+    #     save_parquet_to_minio(weather_df, f"s3a://{SMART_CITY_BUCKET}/{MINIO_WEATHER_PROCESSED_PATH}") # os.getenv("MINIO_WEATHER_PROCESSED_PATH"))
+    #     logger.info("✅ Weather saved to MinIO Silver layer")
 
 
     # ---------- Traffic -----------------------
-
     try:
-        s3_traffic_path = os.getenv("MINIO_TRAFFIC_JSON_PATH")
+        s3_traffic_path = f"s3a://{SMART_CITY_BUCKET}/{MINIO_TRAFFIC_RAW_PATH}"
         raw_traffic = read_json_from_minio(spark, s3_traffic_path)
         traffic_df = flatten_traffic(raw_traffic)
         logger.info(f"✅ Traffic flattened: {traffic_df.count()} rows")
     except AnalysisException as e:
-        logger.error(f"Traffic Data not loading from minio, {e}")
+        logger.error(f"Failed To Read Traffic Data From MinIO, {e}")
         spark.stop()
         return
     
@@ -109,7 +121,12 @@ def main():
     if not run_validation(traffic_df, 'traffic'):
         logger.warning("⚠️ Traffic data failed validation — skipping save")
     else:
-        save_parquet_to_minio(traffic_df, os.getenv("MINIO_TRAFFIC_PROCESSED_PATH"))
+
+        df_check = spark.read.parquet(f"s3a://{SMART_CITY_BUCKET}/{MINIO_TRAFFIC_PROCESSED_PATH}")
+        df_check.printSchema()
+        df_check.show(5, truncate=False)
+
+        save_parquet_to_minio(traffic_df, f"s3a://{SMART_CITY_BUCKET}/{MINIO_TRAFFIC_PROCESSED_PATH}")  # os.getenv("MINIO_TRAFFIC_PROCESSED_PATH"))
         logger.info("✅ Traffic saved to MinIO Silver layer")
 
 

@@ -27,8 +27,18 @@ MINIO_TRAFFIC_PROCESSED_PATH = "traffic/processed/"
 LOCAL_TRAFFIC_RAW_PATH = os.getenv("TRAFFIC_LOCAL_PATH", "/opt/airflow/data/casablanca/traffic/raw/")
 LOCAL_TRAFFIC_PROCESSED_PATH = os.getenv("TRAFFIC_LOCAL_PATH", "/opt/airflow/data/casablanca/traffic/processed/")
 
+# DATABASE: Configuration For Weather and Traffic data:
+DB_USER = "ibrahim"
+DB_PASSWORD = "ibrahim"
+DB_URL ="jdbc:postgresql://postgres:5432/smartcity"
+DB_DRIVER = "org.postgresql.Driver"
 
-def upload_to_minio(file_path: str, bucket_name: str, object_name: str, logger) -> None:
+# DATABASE: TABLES
+DB_WEATHER_TABLE = "weather_data"
+DB_TRAFFIC_TABLE = "traffic_data"
+DB_AGGREGATED_TABLE = "aggregated_data"
+
+def upload_from_local_to_minio(file_path: str, bucket_name: str, object_name: str) -> None:
     '''Uploads a file to MinIO using boto3.
     Args:
         file_path: Local path to the file to be uploaded.
@@ -38,6 +48,8 @@ def upload_to_minio(file_path: str, bucket_name: str, object_name: str, logger) 
     Raises:
         Exception: If the upload fails.    
     '''
+    logger = get_logger("Upload From Local To MinIO")
+
     s3_client = boto3.client(
         's3',
         endpoint_url= os.getenv("MINIO_ENDPOINT"),
@@ -47,11 +59,12 @@ def upload_to_minio(file_path: str, bucket_name: str, object_name: str, logger) 
     )
     try:
         s3_client.upload_file(file_path, bucket_name, object_name)
+        logger.info("File Uploaded Sucessfully To MINIO")
     except Exception as e:
         logger.error(f"Error uploading file to MinIO: {e}", exc_info=True)
 
 
-def append_json_line_loccaly(file_path: str, data: dict) -> None:
+def append_json_line_localy(file_path: str, data: dict) -> None:
     '''
     Append a dictionary as a JSON line to a local file.
     

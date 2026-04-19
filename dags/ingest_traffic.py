@@ -36,8 +36,13 @@ def fetch_and_save():
         data = res.json()
 
         # Add timestamp to the data
-        # data["timestamp"] = datetime.utcnow().isoformat()
-        timestamp = datetime.utcnow().strftime("%Y-%m-%dT%H-%M-%S")
+
+        now = datetime.utcnow()
+        timestamp = datetime.utcnow().strftime("%Y-%m-%dT%H-%M-%S") # --> for the filename 
+        ingested_at = now.strftime("%Y-%m-%dT%H:%M:%S")
+        
+        data['ingested_at'] = ingested_at
+
         key = f"{MINIO_TRAFFIC_RAW_PATH}{timestamp}.json"
         
         try:
