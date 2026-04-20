@@ -16,7 +16,6 @@ from utils.data_io import (
     save_parquet_to_minio
 )
 from utils.config import (
-    
     SMART_CITY_BUCKET,
     MINIO_TRAFFIC_RAW_PATH,
     MINIO_WEATHER_RAW_PATH,
@@ -96,11 +95,6 @@ def main():
     if not run_validation(weather_df, "weather"):
         logger.warning(" ⚠️ Weather data failed validation — skipping save")
     else:
-        
-        # df_check = spark.read.parquet(f"s3a://{SMART_CITY_BUCKET}/{MINIO_WEATHER_PROCESSED_PATH}")
-        # df_check.printSchema()
-        # logger.info(f"Weather COUNT : {df_check.count()} rows")
-        # df_check.show(5, truncate=False)
 
         save_parquet_to_minio(weather_df, f"s3a://{SMART_CITY_BUCKET}/{MINIO_WEATHER_PROCESSED_PATH}") # os.getenv("MINIO_WEATHER_PROCESSED_PATH"))
         logger.info("✅ Weather saved to MinIO Silver layer")
@@ -121,11 +115,6 @@ def main():
     if not run_validation(traffic_df, 'traffic'):
         logger.warning("⚠️ Traffic data failed validation — skipping save")
     else:
-
-        # df_check = spark.read.parquet(f"s3a://{SMART_CITY_BUCKET}/{MINIO_TRAFFIC_PROCESSED_PATH}")
-        # df_check.printSchema()
-        # logger.info(f"TRAFFIC COUNT : {df_check.count()} rows")
-        # df_check.show(5, truncate=False)
 
         save_parquet_to_minio(traffic_df, f"s3a://{SMART_CITY_BUCKET}/{MINIO_TRAFFIC_PROCESSED_PATH}")  # os.getenv("MINIO_TRAFFIC_PROCESSED_PATH"))
         logger.info("✅ Traffic saved to MinIO Silver layer")

@@ -6,37 +6,18 @@ import logging
 import boto3 # type: ignore
 from dotenv import load_dotenv # type: ignore  
 
-# Use separate 
-
 load_dotenv()
 
 def get_logger(name):
     logging.basicConfig(level=logging.INFO)
     return logging.getLogger(name)
 
-# MinIO: Configuration BUCKET:
+# MinIO: Configuration & Paths:
+MINIO_ENDPOINT = "http://minio:9000"
 SMART_CITY_BUCKET = "casablanca"
-# s3a://
 MINIO_WEATHER_RAW_PATH = "weather/raw/"
-MINIO_WEATHER_PROCESSED_PATH = "weather/processed/"
-LOCAL_WEATHER_RAW_PATH = os.getenv("WEATHER_LOCAL_PATH", "/opt/airflow/data/casablanca/weather/raw/")
-LOCAL_WEATHER_PROCESSED_PATH = os.getenv("WEATHER_LOCAL_PATH", "/opt/airflow/data/casablanca/weather/processed/")
-
 MINIO_TRAFFIC_RAW_PATH = "traffic/raw/"
-MINIO_TRAFFIC_PROCESSED_PATH = "traffic/processed/"
-LOCAL_TRAFFIC_RAW_PATH = os.getenv("TRAFFIC_LOCAL_PATH", "/opt/airflow/data/casablanca/traffic/raw/")
-LOCAL_TRAFFIC_PROCESSED_PATH = os.getenv("TRAFFIC_LOCAL_PATH", "/opt/airflow/data/casablanca/traffic/processed/")
 
-# DATABASE: Configuration For Weather and Traffic data:
-DB_USER = "ibrahim"
-DB_PASSWORD = "ibrahim"
-DB_URL ="jdbc:postgresql://postgres:5432/smartcity"
-DB_DRIVER = "org.postgresql.Driver"
-
-# DATABASE: TABLES
-DB_WEATHER_TABLE = "weather_data"
-DB_TRAFFIC_TABLE = "traffic_data"
-DB_AGGREGATED_TABLE = "aggregated_data"
 
 def upload_from_local_to_minio(file_path: str, bucket_name: str, object_name: str) -> None:
     '''Uploads a file to MinIO using boto3.
@@ -52,7 +33,7 @@ def upload_from_local_to_minio(file_path: str, bucket_name: str, object_name: st
 
     s3_client = boto3.client(
         's3',
-        endpoint_url= os.getenv("MINIO_ENDPOINT"),
+        endpoint_url= MINIO_ENDPOINT,
         aws_access_key_id= os.getenv("MINIO_ACCESS_KEY"),
         aws_secret_access_key= os.getenv("MINIO_SECRET_KEY"),
         region_name='us-east-1',
@@ -92,7 +73,7 @@ def upload_to_minio_directly(data: dict, bucket_name: str, object_name: str) -> 
 
     s3_client = boto3.client(
         's3',
-        endpoint_url=os.getenv("MINIO_ENDPOINT"),
+        endpoint_url= MINIO_ENDPOINT,
         aws_access_key_id=os.getenv("MINIO_ACCESS_KEY"),
         aws_secret_access_key=os.getenv("MINIO_SECRET_KEY"),
         region_name='us-east-1',
@@ -111,25 +92,3 @@ def upload_to_minio_directly(data: dict, bucket_name: str, object_name: str) -> 
     except Exception as e:
         logger.error(f"Error uploading file to MinIO: {e}", exc_info=True)
         return
-
-
-def append_json_line_minio(data , bucket_name: str, path) -> None:
-    '''
-    Function That get The JSON File From MinIO and Append to it The New data recieving from the API.
-    Args:
-        minio_json_path: 
-    '''
-    logger = get_logger("Append JSON Line in MinIO ")
-    try:
-        
-        # Get the Data from Minio ... --> Append NewLine --> Upload it Back
-
-        # ( json.dumps(data)+ "\n" )  :  dict → string: '{"temp": 15.19, ...}' and then add newline
-        # .encode("utf-8")            :  string → bytes: b'{"temp": 15.19, ...}\n'
-        newLine = (json.dumps(data)+"\n").encode("utf-8")
-
-
-
-        logger.info(f"✅ Uploaded directly to MinIO: {path}")
-    except Exception as e:
-        logger.error(f"Failed to upload to MinIO: {e}", exc_info=True)

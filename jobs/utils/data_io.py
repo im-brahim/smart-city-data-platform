@@ -1,6 +1,10 @@
 import os
 
 from dotenv import load_dotenv  # type: ignore
+from utils.config import (
+    DB_DRIVER,
+    DB_URL,
+)
 
 load_dotenv()
     
@@ -69,11 +73,11 @@ def read_from_db(spark: "SparkSession") -> "DataFrame":
     """
     return (
         spark.read.format("jdbc")
-        .option("url", os.getenv("DB_URL"))
+        .option("url", DB_URL)
         .option("dbtable", os.getenv("DB_TABLE"))
         .option("user", os.getenv("DB_USER"))
         .option("password", os.getenv("DB_PASSWORD"))
-        .option("driver", os.getenv("DB_DRIVER"))
+        .option("driver", DB_DRIVER)
         .load()
     )
 
@@ -88,11 +92,11 @@ def save_in_db(data: "DataFrame", DB_TABLE: str) -> None:
     """
     (
         data.write.format("jdbc")
-        .option("url", os.getenv("DB_URL"))
+        .option("url", DB_URL)
         .option("dbtable", DB_TABLE)
         .option("user", os.getenv("DB_USER"))
         .option("password", os.getenv("DB_PASSWORD"))
-        .option("driver", os.getenv("DB_DRIVER"))
+        .option("driver", DB_DRIVER)
         .mode("append")
         .save()
     )
@@ -110,11 +114,11 @@ def save_only_new_rows(spark, data: "DataFrame", DB_TABLE: str) -> None:
     try:
         existing_df = (
             spark.read.format("jdbc")
-            .option("url", os.getenv("DB_URL"))
+            .option("url", DB_URL)
             .option("dbtable", f"(SELECT ingested_at FROM {DB_TABLE}) as sub") # Only read IDs to save memory
             .option("user", os.getenv("DB_USER"))
             .option("password", os.getenv("DB_PASSWORD"))
-            .option("driver", os.getenv("DB_DRIVER"))
+            .option("driver", DB_DRIVER)
             .load()
         )
 

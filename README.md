@@ -43,14 +43,21 @@ or u can use the Git terminal for this shortcut
 ./run.sh "file_name.py"
 ```
 
-### the File Roles:
+### The Structure of the Project:
 /SMART-CITY-DATA-PLATFORM:
     /dags
-        ...
-        ... 
-        ...
+        - ingest_traffic.py     --> ingest traffic api every houre
+        - ingest_weather.py     --> ingest weather api every houre
+        - process_and_load.py   --> process the ingested data -> Processed theme -> Load to database
     /jobs
     ...
+
+
+
+***Important Note:***
+the Spark need additionel jars to apple to connect to minio (S3 Compatibility) and Postgres Connections; it's already including in the ccustume spark image i use in this project, if u use an officiel apache spark image or bitnami you need to add these 3 jars to the folder inside the spark service (containers: master and workers) where is located on:
+
+
 
 ### to Check the services UI: 
 Airflow UI: http://localhost:8081/

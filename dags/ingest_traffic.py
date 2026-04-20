@@ -1,17 +1,18 @@
-# PEP8 style guide recommends organizing imports in the following order:
-# 1. Standard library — alphabetical
+# 1. Standard library 
 import os
 from datetime import datetime, timedelta
-import json
 
-# 2. Third party — alphabetical
+# 2. Third party
 from airflow import DAG # type: ignore
 from airflow.operators.python import PythonOperator # type: ignore
 from dotenv import load_dotenv # type: ignore
 import requests
 
 # 3. Local imports
-from utils import get_logger, upload_to_minio_directly, MINIO_TRAFFIC_RAW_PATH, SMART_CITY_BUCKET
+from utils import (
+    get_logger, upload_to_minio_directly,
+    MINIO_TRAFFIC_RAW_PATH, SMART_CITY_BUCKET
+) 
 
 # Load environment variables and initialize logger
 load_dotenv()
