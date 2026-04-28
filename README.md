@@ -7,7 +7,7 @@ A production-style data engineering pipeline that collects, processes, and store
 Bronze → Silver → Gold lakehouse pattern:
 - **Bronze**: Raw JSON files ingested hourly from OpenWeatherMap and TomTom APIs, stored in MinIO
 - **Silver**: Spark batch processing — flattening, validation, enrichment — saved as Parquet
-- **Gold**: Reading the saved parquet — Deduplicated data loaded into PostgreSQL if Exist, ready for Grafana dashboards and ML models
+- **Gold**: Deduplicated data loaded into PostgreSQL, ready for Grafana dashboards and ML models
 
 ## Tech stack
 
@@ -21,77 +21,97 @@ Bronze → Silver → Gold lakehouse pattern:
 
 ## How to run
 
-Clone this repository: 
+Clone this repository:
 ```bash
 git clone https://github.com/im-brahim/smart-city-data-platform.git
 ```
-### build the images services:
-in the root directory run:
+
+### Build the services:
+In the root directory run:
 ```bash
 docker compose up -d
 ```
-*Note:* the spark used is from my docker hub is customized to include the necessary jars for connecting to minio (S3 compatiblity and for Postgres connections)
 
-*Note:* ALL the necessary Scripts Jobs and dags are mounted (local and inside containers) so u can easily modify directly)
+> **Note:** The Spark image used is a custom image from my Docker Hub that includes the necessary jars for MinIO (S3 compatibility) and PostgreSQL connections. See the Spark section in "What I Learned" for why.
 
-Every task is scheduled by airflow dags, however if you need to run a specific job scripts manually : 
-```bash
-docker exec -it master spark-submit path_to_script # e.g : path_to_script -> /opt/spark/jobs/process_city_data.py
-```
-or u can use the Git terminal for this shortcut
+> **Note:** All job scripts and DAGs are mounted as volumes, so you can modify them directly without rebuilding the containers.
+
+Every task is scheduled by Airflow DAGs. To run a specific job manually:
 ```bash
 ./run.sh "file_name.py"
 ```
 
-### The Structure of the Project:
-/SMART-CITY-DATA-PLATFORM:
+### Project structure:
+```
+/smart-city-data-platform
     /dags
-        - ingest_traffic.py     --> ingest traffic api every houre
-        - ingest_weather.py     --> ingest weather api every houre
-        - process_and_load.py   --> process the ingested data -> Processed theme -> Load to database
+        ingest_traffic.py       → ingest traffic API every hour
+        ingest_weather.py       → ingest weather API every hour
+        process_and_load.py     → process ingested data → load to database
+        utils.py
+        requirements.txt
     /jobs
-    ...
+        /utils
+            __init__.py
+            config.py
+            connect.py
+            data_io.py
+            requirements.txt
+        process_city_data.py
+        save_to_db.py
+        validate_data.py
+    docker-compose.yaml
+    init-db.sql
+    run.sh
+    airflow-entrypoint.sh
+```
 
+> **Important:** Spark needs additional jars to connect to MinIO (S3 compatibility) and PostgreSQL. These are already included in the custom Spark image. If you use the official Apache or Bitnami image instead, you will need to add the jars manually to `/opt/spark/jars` inside the Spark containers.
 
+### Service UIs:
+- Airflow: http://localhost:8081/
+- Spark Master: http://localhost:8080/
+- Spark Worker: http://localhost:8082/
+- MinIO: http://localhost:9001/
 
-***Important Note:***
-the Spark need additionel jars to apple to connect to minio (S3 Compatibility) and Postgres Connections; it's already including in the ccustume spark image i use in this project, if u use an officiel apache spark image or bitnami you need to add these 3 jars to the folder inside the spark service (containers: master and workers) where is located on:
+*See `.env.example` for required credentials.*
 
+---
 
+## What I Learned
 
-### to Check the services UI: 
-Airflow UI: http://localhost:8081/
-Spark Master UI: http://localhost:8080/
-Spark Worker UI:http://localhost:8082/
-Minio UI: http://localhost:9001/
+### Data pipeline design
 
-***See .env.example for required credentials***
+The pipeline ingests hourly weather and traffic data from OpenWeatherMap and TomTom APIs. Before saving anything, I add an `ingested_at` field to each API response — the exact UTC time the request was made. This field becomes the deduplication key later in the Gold layer.
 
-## What I learned
+One thing I had to figure out early was how to store data that arrives every hour. My first idea was to append each response to a single JSON file, but that doesn't work well — Spark isn't designed to read one large appended file, and concurrent writes risk corrupting it. So I changed the approach: each API call saves a separate file in MinIO with a timestamped name like `2026-04-17T10-00-00.json`. Spark then reads the entire folder in one shot and processes everything together.
 
-- the moste important daily git & docker command ... 
-- branch main for production and dev for development ...
+One small but important detail — before uploading to MinIO, the API response needs to be converted to bytes:
+```python
+json_bytes = json.dumps(data).encode('utf-8')
+```
+MinIO's `put_object()` expects bytes, not a Python dictionary. That took me a moment to figure out the first time.
 
-- the moste architecture pattern that used by the real companies: Bronze -> Silver -> Gold 
+### Code quality
 
-- a Validation of the data is more important than ingest and load it 
-- A Fail Slow Validation Pattern
-- DRY: Don't Reapeat Yourself -> making a task in a function so  will use it whene i need it not to rewrite the logic each time 
+Early on I had the same utility functions copy-pasted across multiple files — the MinIO upload logic, the logger setup. When I found a bug I had to fix it in three places. I moved everything into shared modules (`dags/utils.py` and `jobs/utils/data_io.py`) so any fix happens once.
 
-- Singelton Pattern : Create an expensive object ONCE, reuse it instead of recreating on every function call.
+For data validation I used the **Fail Slow pattern** — instead of stopping at the first problem, the validator checks all columns and collects every issue before returning. That way I see everything that's wrong in one pipeline run, not one problem per day.
 
-### code quality and security:
-- Any credential or hardcode should past in a secure file and never published (including in .gitignore)
-- Spark need Some additional Jars to be apple to connect, read and write with S3 compatibility and Postgres
-- Airflow dags Containts many type to excute a task including: pythonOperator , bashOperator ...  
-- PEP8 biblio ordering 
-- Using Docstring to explain the role args and the return if exist for each function for easy understanding its role.  
-- Error Handling: 
-    > requests.exceptions.RequestException with an exc_info=True for displying the specific error happened
+### Infrastructure and Spark
 
-- the main() pattern to make the code portable and appility to use return to exit cleanly
+All services run locally using Docker Compose — Airflow, Spark, MinIO, and PostgreSQL on the same network. Using Spark for hourly small batches is not the most efficient choice — pandas would be enough for this data volume. But the goal was to work with the same tools used in real production pipelines, and to prepare for when the historical traffic volume data gets connected later.
 
-- Shared Volume between the services so one place for the configurations . 
+For the Spark image, I first tried the official Apache and Bitnami images for version 3.5.0 — the version I had experience with from a previous project. Both had issues with missing or incompatible jars that I couldn't easily fix. Then I remembered I had already built a custom Spark image on my Docker Hub for a previous project, and that image had all the necessary jars included. I switched to it and everything worked. The project is now more portable — no need to manually mount jars or pass `--jars` flags.
+
+### Security and Git
+
+All credentials and API keys stay in a `.env` file listed in `.gitignore` — never committed. I keep a `.env.example` in the repo so anyone cloning knows exactly what variables to set.
+
+For Git I use two branches: `dev` for daily work and `main` only for stable, tested code. This way I never break the working pipeline while adding new features.
+
+---
+
 ## What's next
 
 - Grafana dashboard for weather/traffic correlation
