@@ -16,7 +16,7 @@ services:
     networks:
       - etl-network
     volumes:
-      - ./jars:/opt/spark/jars
+      # - ./jars:/opt/spark/jars
       - ./jobs:/opt/spark/jobs
 
   worker:
@@ -36,7 +36,7 @@ services:
       - master
     volumes:
       - ./jobs:/opt/spark/jobs
-      - ./jars:/opt/spark/jars
+      # - ./jars:/opt/spark/jars
 
     networks:
       - etl-network
@@ -96,9 +96,29 @@ services:
       - etl-network
 
 
+  jupyter:
+    image: quay.io/jupyter/pyspark-notebook
+    container_name: notebook
+    ports:
+      - "8888:8888"
+    volumes:
+      - ./work:/home/jovyan/work
+      # - work:/home/jovyan/work
+    environment:
+      - JUPYTER_TOKEN=7777777
+      - JUPYTER_ENABLE_LAB=yes
+    restart: always
+    # command: >
+    #       bash -c "start-notebook.sh --NotebookApp.token='7777777'"
+    networks:
+      - etl-network
+    
+
+
 volumes:
   minio_data:
   postgres_data:
+  work:
 
 networks:
   etl-network:

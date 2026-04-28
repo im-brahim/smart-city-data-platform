@@ -1,50 +1,68 @@
-# Other File/Folder
+# ================================
+# Personal & Local Files
+# ================================
 .vscode/
 Info.txt
-*.docx
-*.json
-data-output
-data/
 LEARNING_LOG.md
 COACH_CONTEXT.md
 test.py
 
+# ================================
+# Data & Output Folders
+# ================================
+data/
+data-output/
+TRAFFIC FLOW/
+work/
 
-# Secrets & Setting Files
+# ================================
+# Secrets & Environment
+# ================================
 .env
+.env.local
 
-# Python bytecode files
+# ================================
+# Python
+# ================================
 *.pyc
 *.pyo
 __pycache__/
 
-# Jupyter Notebooks checkpoints
-notebooks/*.ipynb
-.ipynb_checkpoints/
+# ================================
+# Jupyter Notebooks
+# ================================
 *.ipynb
+.ipynb_checkpoints/
+notebooks/*.ipynb
 
-# Docker-related files
+# ================================
+# Docker
+# ================================
 docker-compose.override.yml
 *.log
 *.bak
 *.swp
 
-# Ignore the jars and driver folder     
-./jars/*.jar
-*.jar
+# ================================
+# Jars
+# ================================
 jars/
+*.jar
 
-
-# Airflow files
+# ================================
+# Airflow
+# ================================
 airflow.db
 airflow-logs/
 
-# MinIO / S3 data 
+# ================================
+# Storage Data (MinIO / Postgres)
+# ================================
 minio_data/
-
-# Postgres data 
 postgres_data/
 
-
-.env 
-.env 
+# ================================
+# Office & Generated Files
+# ================================
+*.docx
+*.json
