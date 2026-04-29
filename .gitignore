@@ -14,6 +14,7 @@ data/
 data-output/
 TRAFFIC FLOW/
 work/
+jobs/scripts/
 
 # ================================
 # Secrets & Environment
