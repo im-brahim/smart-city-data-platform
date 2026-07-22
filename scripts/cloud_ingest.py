@@ -6,33 +6,29 @@ from datetime import datetime
 from botocore.config import Config
 from dotenv import load_dotenv
 
-# Load environment variables (for local testing)
+# Enforce S3 checksum & signature compatibility for Backblaze B2
+os.environ["AWS_REQUEST_CHECKSUM_CALCULATION"] = "when_required"
+os.environ["AWS_RESPONSE_CHECKSUM_VALIDATION"] = "when_required"
+
+# Load local environment variables (for local development)
 load_dotenv()
 
 
 def clean_env(key: str, default: str = "") -> str:
-    """Strip quotes, whitespace, and invisible line breaks from env variables."""
+    """Sanitizes environment variables by removing quotes, whitespace, and newlines."""
     val = os.getenv(key, default)
     if not val:
         return ""
     return val.strip().strip('"').strip("'").replace("\r", "").replace("\n", "")
 
 
-def mask_secret(val: str) -> str:
-    """Safely mask secrets for debugging."""
-    if not val:
-        return "[NOT SET]"
-    if len(val) <= 6:
-        return "***"
-    return f"{val[:3]}...{val[-3:]} (length: {len(val)})"
-
-
-# Environment Configurations
+# Configuration variables
 ENDPOINT_URL = clean_env("S3_ENDPOINT_URL", "https://s3.us-east-005.backblazeb2.com")
 AWS_ACCESS_KEY_ID = clean_env("AWS_ACCESS_KEY_ID")
 AWS_SECRET_ACCESS_KEY = clean_env("AWS_SECRET_ACCESS_KEY")
 BUCKET_NAME = clean_env("S3_BUCKET_NAME", "smart-city")
 
+# Ensure valid HTTP/HTTPS protocol
 if ENDPOINT_URL and not (ENDPOINT_URL.startswith("http://") or ENDPOINT_URL.startswith("https://")):
     ENDPOINT_URL = f"https://{ENDPOINT_URL}"
 
@@ -41,25 +37,20 @@ WEATHER_API = clean_env("WEATHER_API")
 
 
 def get_s3_client():
-    # Extract region (e.g., 'us-east-005')
+    """Initializes a boto3 S3 client configured specifically for Backblaze B2."""
     region = "us-east-005"
     if "s3." in ENDPOINT_URL and ".backblazeb2.com" in ENDPOINT_URL:
         region = ENDPOINT_URL.split("s3.")[1].split(".backblazeb2.com")[0]
 
-    # Diagnostic output
-    print(f"🔧 Endpoint: {ENDPOINT_URL} | Region: {region}")
-    print(f"🔑 Key ID: {mask_secret(AWS_ACCESS_KEY_ID)} | Secret: {mask_secret(AWS_SECRET_ACCESS_KEY)}")
-
-    # Force path style and disable streaming payload signing
     boto_config = Config(
         region_name=region,
         signature_version="s3v4",
         s3={
             "addressing_style": "path",
             "payload_signing_enabled": False,
-            "request_checksum_calculation": "when_required",
-            "response_checksum_validation": "when_required",
         },
+        request_checksum_calculation="when_required",
+        response_checksum_validation="when_required",
     )
 
     return boto3.client(
@@ -72,6 +63,7 @@ def get_s3_client():
 
 
 def ingest_api_data(api_url: str, category: str):
+    """Fetches data from an API endpoint and uploads the raw JSON payload to Bronze S3 storage."""
     if not api_url:
         print(f"⚠️ Warning: API URL for '{category}' is not set in environment. Skipping...")
         return
@@ -87,6 +79,7 @@ def ingest_api_data(api_url: str, category: str):
         file_timestamp = now.strftime("%Y-%m-%dT%H-%M-%S")
         ingested_at = now.strftime("%Y-%m-%dT%H:%M:%S")
 
+        # Inject ingestion metadata timestamp if payload is a dictionary
         if isinstance(data, dict):
             data["ingested_at"] = ingested_at
 
