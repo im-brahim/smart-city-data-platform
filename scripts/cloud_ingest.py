@@ -6,7 +6,7 @@ from datetime import datetime
 from botocore.config import Config
 from dotenv import load_dotenv
 
-# Load environment variables from .env file (for local testing)
+# Load environment variables (for local testing)
 load_dotenv()
 
 
@@ -18,13 +18,21 @@ def clean_env(key: str, default: str = "") -> str:
     return val.strip().strip('"').strip("'").replace("\r", "").replace("\n", "")
 
 
-# Configuration (Sanitized)
+def mask_secret(val: str) -> str:
+    """Safely mask secrets for debugging."""
+    if not val:
+        return "[NOT SET]"
+    if len(val) <= 6:
+        return "***"
+    return f"{val[:3]}...{val[-3:]} (length: {len(val)})"
+
+
+# Environment Configurations
 ENDPOINT_URL = clean_env("S3_ENDPOINT_URL", "https://s3.us-east-005.backblazeb2.com")
 AWS_ACCESS_KEY_ID = clean_env("AWS_ACCESS_KEY_ID")
 AWS_SECRET_ACCESS_KEY = clean_env("AWS_SECRET_ACCESS_KEY")
 BUCKET_NAME = clean_env("S3_BUCKET_NAME", "smart-city")
 
-# Ensure https:// prefix
 if ENDPOINT_URL and not (ENDPOINT_URL.startswith("http://") or ENDPOINT_URL.startswith("https://")):
     ENDPOINT_URL = f"https://{ENDPOINT_URL}"
 
@@ -33,18 +41,25 @@ WEATHER_API = clean_env("WEATHER_API")
 
 
 def get_s3_client():
-    """
-    Initialize boto3 client explicitly configured for Backblaze B2 region & signature version.
-    """
-    # Extract region from endpoint (e.g., 'us-east-005' from 'https://s3.us-east-005.backblazeb2.com')
+    # Extract region (e.g., 'us-east-005')
     region = "us-east-005"
     if "s3." in ENDPOINT_URL and ".backblazeb2.com" in ENDPOINT_URL:
         region = ENDPOINT_URL.split("s3.")[1].split(".backblazeb2.com")[0]
 
+    # Diagnostic output
+    print(f"🔧 Endpoint: {ENDPOINT_URL} | Region: {region}")
+    print(f"🔑 Key ID: {mask_secret(AWS_ACCESS_KEY_ID)} | Secret: {mask_secret(AWS_SECRET_ACCESS_KEY)}")
+
+    # Force path style and disable streaming payload signing
     boto_config = Config(
         region_name=region,
         signature_version="s3v4",
-        s3={"request_checksum_calculation": "when_required"}  # Compatibility for newer boto3
+        s3={
+            "addressing_style": "path",
+            "payload_signing_enabled": False,
+            "request_checksum_calculation": "when_required",
+            "response_checksum_validation": "when_required",
+        },
     )
 
     return boto3.client(
@@ -52,7 +67,7 @@ def get_s3_client():
         endpoint_url=ENDPOINT_URL,
         aws_access_key_id=AWS_ACCESS_KEY_ID,
         aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
-        config=boto_config
+        config=boto_config,
     )
 
 
@@ -81,8 +96,8 @@ def ingest_api_data(api_url: str, category: str):
         s3_client.put_object(
             Bucket=BUCKET_NAME,
             Key=s3_key,
-            Body=json.dumps(data),
-            ContentType="application/json"
+            Body=json.dumps(data).encode("utf-8"),
+            ContentType="application/json",
         )
         print(f"✅ Successfully uploaded to s3://{BUCKET_NAME}/{s3_key}")
 
