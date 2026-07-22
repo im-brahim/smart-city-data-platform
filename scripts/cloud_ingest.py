@@ -6,11 +6,7 @@ from datetime import datetime
 from botocore.config import Config
 from dotenv import load_dotenv
 
-# Enforce S3 checksum & signature compatibility for Backblaze B2
-os.environ["AWS_REQUEST_CHECKSUM_CALCULATION"] = "when_required"
-os.environ["AWS_RESPONSE_CHECKSUM_VALIDATION"] = "when_required"
-
-# Load local environment variables (for local development)
+# Load local environment variables (for local execution)
 load_dotenv()
 
 
@@ -28,7 +24,7 @@ AWS_ACCESS_KEY_ID = clean_env("AWS_ACCESS_KEY_ID")
 AWS_SECRET_ACCESS_KEY = clean_env("AWS_SECRET_ACCESS_KEY")
 BUCKET_NAME = clean_env("S3_BUCKET_NAME", "smart-city")
 
-# Ensure valid HTTP/HTTPS protocol
+# Ensure valid HTTP/HTTPS protocol prefix
 if ENDPOINT_URL and not (ENDPOINT_URL.startswith("http://") or ENDPOINT_URL.startswith("https://")):
     ENDPOINT_URL = f"https://{ENDPOINT_URL}"
 
@@ -37,20 +33,10 @@ WEATHER_API = clean_env("WEATHER_API")
 
 
 def get_s3_client():
-    """Initializes a boto3 S3 client configured specifically for Backblaze B2."""
-    region = "us-east-005"
-    if "s3." in ENDPOINT_URL and ".backblazeb2.com" in ENDPOINT_URL:
-        region = ENDPOINT_URL.split("s3.")[1].split(".backblazeb2.com")[0]
-
+    """Initializes a boto3 S3 client configured for Backblaze B2 compatibility."""
     boto_config = Config(
-        region_name=region,
         signature_version="s3v4",
-        s3={
-            "addressing_style": "path",
-            "payload_signing_enabled": False,
-        },
-        request_checksum_calculation="when_required",
-        response_checksum_validation="when_required",
+        s3={"addressing_style": "path"},
     )
 
     return boto3.client(
@@ -63,7 +49,7 @@ def get_s3_client():
 
 
 def ingest_api_data(api_url: str, category: str):
-    """Fetches data from an API endpoint and uploads the raw JSON payload to Bronze S3 storage."""
+    """Fetches data from an API endpoint and uploads the raw JSON payload to S3 storage."""
     if not api_url:
         print(f"⚠️ Warning: API URL for '{category}' is not set in environment. Skipping...")
         return
