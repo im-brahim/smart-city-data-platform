@@ -18,6 +18,7 @@ services:
     volumes:
       # - ./jars:/opt/spark/jars
       - ./jobs:/opt/spark/jobs
+      - ./scripts:/opt/spark/scripts
 
   worker:
     image: ibrahimelaidouni/my-custom-spark:3.5.0
