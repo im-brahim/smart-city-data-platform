@@ -2,8 +2,8 @@ name: Smart City Hourly Data Ingestion
 
 on:
   schedule:
-    - cron: '0 * * * *'  # Triggered automatically every hour at minute 0
-  workflow_dispatch:      # Allows manual trigger via GitHub UI
+    - cron: '0 * * * *'  # Runs every hour
+  workflow_dispatch:      # Allows manual triggers
 
 jobs:
   ingest-data:
