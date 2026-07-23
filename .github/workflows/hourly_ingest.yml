@@ -20,7 +20,7 @@ jobs:
 
       - name: Install Python Dependencies
         run: |
-          pip install "boto3<1.36.0" python-dotenv requests
+          pip install boto3 python-dotenv requests
 
       - name: Execute Cloud Ingestion Script
         env:
