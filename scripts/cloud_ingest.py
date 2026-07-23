@@ -6,19 +6,25 @@ from datetime import datetime
 from botocore.config import Config
 from dotenv import load_dotenv
 
-# Load local environment variables from .env file
 load_dotenv()
 
 
 def clean_env(key: str, default: str = "") -> str:
-    """Sanitizes environment variables by removing quotes, whitespace, and newlines."""
     val = os.getenv(key, default)
     if not val:
         return ""
     return val.strip().strip('"').strip("'").replace("\r", "").replace("\n", "")
 
 
-# Configuration
+def mask_secret(val: str) -> str:
+    """Safely displays string length and masked preview."""
+    if not val:
+        return "[NOT SET]"
+    if len(val) <= 6:
+        return "***"
+    return f"{val[:3]}...{val[-3:]} (len: {len(val)})"
+
+
 ENDPOINT_URL = clean_env("S3_ENDPOINT_URL", "https://s3.us-east-005.backblazeb2.com")
 AWS_ACCESS_KEY_ID = clean_env("AWS_ACCESS_KEY_ID")
 AWS_SECRET_ACCESS_KEY = clean_env("AWS_SECRET_ACCESS_KEY")
@@ -27,11 +33,9 @@ BUCKET_NAME = clean_env("S3_BUCKET_NAME", "smart-city")
 TRAFFIC_API = clean_env("TRAFFIC_API")
 WEATHER_API = clean_env("WEATHER_API")
 
-# Ensure valid HTTP/HTTPS protocol prefix
 if ENDPOINT_URL and not (ENDPOINT_URL.startswith("http://") or ENDPOINT_URL.startswith("https://")):
     ENDPOINT_URL = f"https://{ENDPOINT_URL}"
 
-# Extract region name automatically (e.g. 'us-east-005')
 region = "us-east-005"
 if "s3." in ENDPOINT_URL and ".backblazeb2.com" in ENDPOINT_URL:
     try:
@@ -41,7 +45,6 @@ if "s3." in ENDPOINT_URL and ".backblazeb2.com" in ENDPOINT_URL:
 
 
 def get_s3_client():
-    """Initializes a boto3 S3 client explicitly configured for Backblaze B2."""
     boto_config = Config(
         region_name=region,
         signature_version="s3v4",
@@ -93,9 +96,11 @@ def ingest_api_data(api_url: str, category: str):
 
 
 if __name__ == "__main__":
-    print("🚀 Starting Local Smart City Cloud Ingestion Test...")
+    print("🚀 Starting Smart City Cloud Ingestion Test...")
     print(f"🔧 Endpoint: {ENDPOINT_URL} (Region: {region})")
     print(f"📦 Target Bucket: {BUCKET_NAME}")
+    print(f"🔑 Key ID: {mask_secret(AWS_ACCESS_KEY_ID)}")
+    print(f"🔒 Secret Key: {mask_secret(AWS_SECRET_ACCESS_KEY)}")
     ingest_api_data(TRAFFIC_API, "traffic")
     ingest_api_data(WEATHER_API, "weather")
-    print("🏁 Local Pipeline Execution Complete.")
+    print("🏁 Pipeline Execution Complete.")
