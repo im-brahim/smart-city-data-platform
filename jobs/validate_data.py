@@ -4,8 +4,8 @@ Validates weather and traffic DataFrames before
 they are saved to PostgreSQL.
 """
 
-from pyspark.sql import DataFrame
-from pyspark.sql.functions import col
+from pyspark.sql import DataFrame       #type: ignore
+from pyspark.sql.functions import col       #type: ignore
 
 from utils.connect import get_logger
 
@@ -132,17 +132,17 @@ def run_validation(df: DataFrame, source: str) -> bool:
         # ------------------- WEATHER ------------------------
 
         logger.info("---------- Checking Realistic Values in WEATHER for TEMPERATURE ... ------------------ ")
-        if not validate_realistic_values(df, 'temp',  min_val , max_val):
+        if not validate_realistic_values(df, 'temp',  min_val , max_val):   #type: ignore
             is_valid = False 
     else:
         # ------------------- Traffic ------------------------
         
         logger.info("---------- Checking Realistic Values in TRAFFIC for CURRENTSPEED ... ------------------ ")
-        if not validate_realistic_values(df, 'currentSpeed',  min_speed , max_speed):
+        if not validate_realistic_values(df, 'currentSpeed',  min_speed , max_speed):   #type: ignore
             is_valid = False
         
         logger.info("---------- Checking Realistic Values in TRAFFIC for CONFIDENCE ... ------------------ ")
-        if not validate_realistic_values(df, 'confidence',  min_confidence , max_confidence):
+        if not validate_realistic_values(df, 'confidence',  min_confidence , max_confidence):       #type: ignore
             is_valid = False
     
     if is_valid:
