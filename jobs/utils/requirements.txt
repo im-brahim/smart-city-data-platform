@@ -1,2 +1,4 @@
 requests
 python-dotenv
+psycopg2-binary==2.9.12
+boto3==1.38.23
