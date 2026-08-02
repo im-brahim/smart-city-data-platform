@@ -6,6 +6,6 @@ CREATE DATABASE smartcity OWNER ibrahim;
 \c smartcity
 
 CREATE TABLE pipeline_track (
-    "source" varchar(10) primary key, 
+    "source" varchar(20) primary key, 
     "last_processed" timestamp 
 )
