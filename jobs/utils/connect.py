@@ -1,18 +1,13 @@
-import os
 import logging
 
 from pyspark.sql import SparkSession # type: ignore
-from dotenv import load_dotenv  # type: ignore
 
 from utils.config import(
-    MINIO_ENDPOINT,
-    MINIO_ACCESS_KEY,
-    MINIO_SECRET_KEY,
-    PATH_STYLE_ACCESS,
-    S3A_IMPL
+    B2_ENDPOINT_URL,
+    B2_ACCESS_KEY_ID,
+    B2_SECRET_ACCESS_KEY,
 )
 
-load_dotenv()
 
 def get_logger(name):
     """
@@ -26,16 +21,15 @@ def get_logger(name):
     logging.basicConfig(level=logging.INFO)
     return logging.getLogger(name)
 
-def create_spark_session(app_name , use_minio = True): 
+def create_spark_session(app_name): 
     """Create a Spark session with appropriate configurations"""
-    # spark_master = os.getenv("SPARK_MASTER")
-    builder = SparkSession.builder.appName(app_name).master("spark://master:7077")
-    if use_minio:
-        builder = builder \
-            .config("spark.hadoop.fs.s3a.endpoint", MINIO_ENDPOINT) \
-            .config("spark.hadoop.fs.s3a.access.key",  MINIO_ACCESS_KEY) \
-            .config("spark.hadoop.fs.s3a.secret.key", MINIO_SECRET_KEY) \
-            .config("spark.hadoop.fs.s3a.path.style.access", PATH_STYLE_ACCESS) \
-            .config("spark.hadoop.fs.s3a.impl", S3A_IMPL) \
-    
+    builder = SparkSession.builder.appName(app_name) \
+        .master("spark://master:7077") \
+        .config("spark.hadoop.fs.s3a.endpoint", B2_ENDPOINT_URL) \
+        .config("spark.hadoop.fs.s3a.access.key",  B2_ACCESS_KEY_ID) \
+        .config("spark.hadoop.fs.s3a.secret.key", B2_SECRET_ACCESS_KEY) \
+        .config("spark.hadoop.fs.s3a.path.style.access", "true") \
+        .config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem") \
+        .config("spark.hadoop.fs.s3a.directory.marker.retention", "keep") \
+        
     return builder.getOrCreate()
