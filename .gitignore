@@ -5,7 +5,8 @@
 Info.txt
 LEARNING_LOG.md
 COACH_CONTEXT.md
-test.py
+jobs/scripts_test/
+debug.py
 
 # ================================
 # Data & Output Folders
@@ -14,7 +15,7 @@ data/
 data-output/
 TRAFFIC FLOW/
 work/
-jobs/scripts/
+
 
 # ================================
 # Secrets & Environment
@@ -44,11 +45,6 @@ docker-compose.override.yml
 *.bak
 *.swp
 
-# ================================
-# Jars
-# ================================
-jars/
-*.jar
 
 # ================================
 # Airflow
@@ -59,7 +55,6 @@ airflow-logs/
 # ================================
 # Storage Data (MinIO / Postgres)
 # ================================
-minio_data/
 postgres_data/
 
 # ================================
