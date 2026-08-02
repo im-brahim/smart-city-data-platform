@@ -2,58 +2,60 @@ from dotenv import load_dotenv #type:ignore
 from pyspark.sql.utils import AnalysisException # type: ignore
 
 from utils.data_io import (
-    read_parquet_from_minio, 
-    save_only_new_rows,
+    read_parquet_from_Cloud, 
+    save_only_new_rows, get_client
 )
 from utils.config import (
-    MINIO_TRAFFIC_PROCESSED_PATH,
-    MINIO_WEATHER_PROCESSED_PATH,
-    SMART_CITY_BUCKET,
+    SILVER_TRAFFIC_PREFIX,
+    SILVER_WEATHER_PREFIX,
+    B2_BUCKET_NAME,
     DB_WEATHER_TABLE,
     DB_TRAFFIC_TABLE,
 )
 from utils.connect import create_spark_session,  get_logger
 load_dotenv()
 
+def read_and_save(spark, logger, s3_client, bucket, silver_path, table):
+    try:
+        response = s3_client.list_objects_v2(Bucket=bucket, Prefix=silver_path)
+        objects = response.get("Contents", [])
+
+        paths = [ f"s3a://{bucket}/{obj['Key']}"
+            for obj in objects
+            if not obj["Key"].endswith("SUCCESS") and "_temporary" not in obj["Key"]
+        ]
+
+        if not paths:
+            logger.info(f"No files found for {silver_path} — skipping.")
+            return
+
+        df = read_parquet_from_Cloud(spark, *paths).cache()
+        count = df.count()
+        logger.info(f"---------- {count} PROCESSED {silver_path} DATA FROM CLOUD SUCESSFULLY READED --------- ")
+
+        try:
+            save_only_new_rows(spark, df, table)
+            logger.info(f"-------------- {count} rows Saved Sucessfully to Table {table}")
+        except Exception as e:
+            logger.error(f"Failed to save Data to Database : {e}", exc_info=True)
+            return
+
+    except Exception as e:
+        logger.error(f"❌ --- FAILED TO LOAD Processed {silver_path} DATA To DB Table {table} : {e}", exc_info=True)
+
 def main():
     
     logger = get_logger("Save SMART CITY DATA TO DATABASE")
-    spark = create_spark_session("SaveNewToPostgres", True)
+    spark = create_spark_session("Save New Data To Postgres Tables")
+    s3_client = get_client()
 
-    # -------------------  Read TRAFFIC DATA from MinIO --------------------------------  
+    # -------------------  Read TRAFFIC DATA from CLOUD ---> SAVE TO DATABASE --------------------------------  
     
-    # SAVE the Reading DATA to DATABASE TABLE 
-    try:
-        
-        df = read_parquet_from_minio(spark, f"s3a://{SMART_CITY_BUCKET}/{MINIO_TRAFFIC_PROCESSED_PATH}")
-        traffic_count = df.count()
-        logger.info(f"---------- PROCESSED TRAFFIC DATA FROM MINIO SUCESSFULLY READED --------- ")
-        
-        save_only_new_rows(spark, df, DB_TRAFFIC_TABLE)
-        logger.info(f"--------------The {traffic_count} TRAFFIC Data Saving Sucessfully to Table {DB_TRAFFIC_TABLE}")
-    
-    except AnalysisException as e:
-        logger.error(f"❌----------------FAILED TO LOAD Processed TRAFFIC DATA To DB Table {DB_TRAFFIC_TABLE}, {e}")
-        spark.stop()
-        return  
-    
-    
-    # -------------------  Read WEATHER DATA from MinIO --------------------------------
+    read_and_save(spark, logger, s3_client, B2_BUCKET_NAME, SILVER_TRAFFIC_PREFIX, DB_TRAFFIC_TABLE )
+          
+    # -------------------  Read WEATHER DATA from CLOUD ---> SAVE TO DATABASE --------------------------------
 
-    
-    try:
-        
-        df = read_parquet_from_minio(spark, f"s3a://{SMART_CITY_BUCKET}/{MINIO_WEATHER_PROCESSED_PATH}")
-        weather_count = df.count()  
-
-        save_only_new_rows(spark, df, DB_WEATHER_TABLE)
-        logger.info(f"-------------- THE {weather_count} WEATHER Data Saving Sucessfully to Table {DB_WEATHER_TABLE}")
-    
-    except AnalysisException as e:
-        logger.error(f"❌ ------ FAILED TO LOAD Processed WEATHER DATA To DB Table {DB_WEATHER_TABLE} " + str(e))
-        spark.stop()
-        return
-   
+    read_and_save(spark, logger, s3_client, B2_BUCKET_NAME, SILVER_WEATHER_PREFIX, DB_WEATHER_TABLE)
 
     spark.stop()
 
