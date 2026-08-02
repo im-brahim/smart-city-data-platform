@@ -42,4 +42,4 @@ with DAG(
         """
     )
 
-    task_process >> save_to_db_task
+    # task_process >> save_to_db_task
