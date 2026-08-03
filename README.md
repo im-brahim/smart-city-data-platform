@@ -1,119 +1,64 @@
-# Smart City Data Platform — Casablanca
+# Smart City Data Platform — Spark + Backblaze B2 (Snapshot)
 
-A production-style data engineering pipeline that collects, processes, and stores real-time weather and traffic data for Casablanca, Morocco. Built to feed a machine learning model for urban traffic prediction — extending my Master's thesis research from historical NYC data to live city data.
+> **This branch is archived on purpose.** It represents a real, working distributed-Spark pipeline reading from and writing to Backblaze B2 via the S3A connector. I'm keeping it exactly as it is instead of merging it into `main`, because the direction the project needs going forward is different from what this branch proves.
 
-## Architecture
+## Why this branch exists
 
-Bronze → Silver → Gold lakehouse pattern:
-- **Bronze**: Raw JSON files ingested hourly from OpenWeatherMap and TomTom APIs, stored in MinIO
-- **Silver**: Spark batch processing — flattening, validation, enrichment — saved as Parquet
-- **Gold**: Deduplicated data loaded into PostgreSQL, ready for Grafana dashboards and ML models
+I built this to answer one question honestly: can I actually run Spark against cloud object storage, not just on a toy local dataset? Bronze ingestion was already saving hourly weather and traffic JSON to MinIO, then later migrated to Backblaze B2. This branch is where I moved the Silver processing layer to read that data with Spark's native `s3a://` connector instead of looping over files with boto3 — 57 files in, 57 flattened rows out, confirmed working.
 
-## Tech stack
+It did what I needed it to do. I got hands-on with:
+- A real multi-container Spark cluster (master + worker) in Docker Compose
+- The S3A connector against a non-AWS S3-compatible provider (Backblaze B2), including endpoint/path-style config that AWS-only tutorials don't cover
+- Driver classpath quirks — each container that creates a `SparkSession` needs its own S3A jars, whether that's the master (`spark-submit`) or a Jupyter container running notebooks
+- A durable watermark pattern (`pipeline_track` table in PostgreSQL) to avoid reprocessing files across runs, using `StartAfter` on `list_objects_v2` instead of listing the full bucket every time
+- The actual operational pain of running a stateful cluster locally — worker re-registration breaking after the master container gets recreated, Docker Desktop silently dropping network connections after the host sleeps, `df.show()` hanging with no clean error because the driver-local metadata calls still return fine even when the network is dead underneath
 
-| Tool | Role |
-|---|---|
-| Apache Airflow 2.7 | Pipeline orchestration |
-| Apache Spark 3.5 | Distributed batch processing |
-| MinIO | S3-compatible object storage |
-| PostgreSQL 13 | Serving layer |
-| Docker Compose | Local infrastructure |
+## Why I'm not continuing on this path
 
-## How to run
+Partway through, I stepped back and did the actual math: this pipeline ingests ~2 API calls an hour, roughly 1,400 files a month. That's nowhere near the scale Spark is built to justify. Everything hard about this branch — the classpath management, the worker registration, the jar compatibility across Spark images — exists *because* Spark assumes a many-worker, large-file world. At this volume none of those problems exist in plain pandas.
 
-Clone this repository:
-```bash
-git clone https://github.com/im-brahim/smart-city-data-platform.git
+I already have a project that proves distributed Spark competence on its own — [`spark-cluster-docker`](https://github.com/ibrahimelaidouni/spark-cluster-docker), a standalone cluster reading real data from B2 at a scale where Spark actually earns its complexity. Smart City doesn't need to prove that twice. What Smart City actually needs is a pipeline that's cheap to run, easy to reason about, and gets out of the way of the part that matters most for this project — the ML layer.
+
+So going forward, `main` and `dev` move to a plain Python (pandas) implementation of Bronze → Silver, orchestrated with GitHub Actions instead of Airflow, with the same watermark logic carried over unchanged. This branch stays as the record of the Spark version and the reasoning behind the switch — not a step backward, a deliberate engineering call made with evidence in hand.
+
+## Architecture (as of this snapshot)
+
+Bronze → Silver → Gold, Spark-based:
+
+| Layer | Tool | Description |
+|---|---|---|
+| **Bronze** | boto3 → B2 | Hourly JSON from OpenWeatherMap + TomTom, timestamped files |
+| **Silver** | Spark (S3A) → B2 | Read via `s3a://`, flatten, validate, save as Parquet |
+| **Gold** | PostgreSQL | Deduplicated load for dashboards/ML |
+| **Watermark** | PostgreSQL `pipeline_track` | Tracks `last_processed` per source, drives `StartAfter` on listing |
+
+### Tech stack
+Apache Spark 3.5.0 (PySpark), Docker Compose, Backblaze B2 (S3A), PostgreSQL 13, custom Spark image (`ibrahimelaidouni/my-custom-spark:3.5.0`) with S3A + PostgreSQL jars pre-baked in.
+
+### Key files
+```
+jobs/
+  process_city_data.py   → Bronze→Silver, Spark read via s3a://
+  save_to_db.py          → Silver→Gold, PostgreSQL load
+  validate_data.py       → fail-slow data quality checks
+  utils/
+    connect.py            → SparkSession factory, S3A config
+    data_io.py             → watermark get/update, B2 client, Parquet I/O
+    config.py               → B2 + DB configuration
+docker-compose.yaml        → master, worker, postgres services
+init-db.sql                 → pipeline_track table definition
 ```
 
-### Build the services:
-In the root directory run:
+## Running this snapshot
+
 ```bash
+git clone https://github.com/im-brahim/smart-city-data-platform.git
+git checkout feature/cloud-storage
 docker compose up -d
 ```
 
-> **Note:** The Spark image used is a custom image from my Docker Hub that includes the necessary jars for MinIO (S3 compatibility) and PostgreSQL connections. See the Spark section in "What I Learned" for why.
-
-> **Note:** All job scripts and DAGs are mounted as volumes, so you can modify them directly without rebuilding the containers.
-
-Every task is scheduled by Airflow DAGs. To run a specific job manually:
-```bash
-./run.sh "file_name.py"
-```
-
-### Project structure:
-```
-/smart-city-data-platform
-    /dags
-        ingest_traffic.py       → ingest traffic API every hour
-        ingest_weather.py       → ingest weather API every hour
-        process_and_load.py     → process ingested data → load to database
-        utils.py
-        requirements.txt
-    /jobs
-        /utils
-            __init__.py
-            config.py
-            connect.py
-            data_io.py
-            requirements.txt
-        process_city_data.py
-        save_to_db.py
-        validate_data.py
-    docker-compose.yaml
-    init-db.sql
-    run.sh
-    airflow-entrypoint.sh
-```
-
-> **Important:** Spark needs additional jars to connect to MinIO (S3 compatibility) and PostgreSQL. These are already included in the custom Spark image. If you use the official Apache or Bitnami image instead, you will need to add the jars manually to `/opt/spark/jars` inside the Spark containers.
-
-### Service UIs:
-- Airflow: http://localhost:8081/
-- Spark Master: http://localhost:8080/
-- Spark Worker: http://localhost:8082/
-- MinIO: http://localhost:9001/
-
-*See `.env.example` for required credentials.*
+See `.env.example` for required B2 and PostgreSQL credentials.
 
 ---
 
-## What I Learned
-
-### Data pipeline design
-
-The pipeline ingests hourly weather and traffic data from OpenWeatherMap and TomTom APIs. Before saving anything, I add an `ingested_at` field to each API response — the exact UTC time the request was made. This field becomes the deduplication key later in the Gold layer.
-
-One thing I had to figure out early was how to store data that arrives every hour. My first idea was to append each response to a single JSON file, but that doesn't work well — Spark isn't designed to read one large appended file, and concurrent writes risk corrupting it. So I changed the approach: each API call saves a separate file in MinIO with a timestamped name like `2026-04-17T10-00-00.json`. Spark then reads the entire folder in one shot and processes everything together.
-
-One small but important detail — before uploading to MinIO, the API response needs to be converted to bytes:
-```python
-json_bytes = json.dumps(data).encode('utf-8')
-```
-MinIO's `put_object()` expects bytes, not a Python dictionary. That took me a moment to figure out the first time.
-
-### Code quality
-
-Early on I had the same utility functions copy-pasted across multiple files — the MinIO upload logic, the logger setup. When I found a bug I had to fix it in three places. I moved everything into shared modules (`dags/utils.py` and `jobs/utils/data_io.py`) so any fix happens once.
-
-For data validation I used the **Fail Slow pattern** — instead of stopping at the first problem, the validator checks all columns and collects every issue before returning. That way I see everything that's wrong in one pipeline run, not one problem per day.
-
-### Infrastructure and Spark
-
-All services run locally using Docker Compose — Airflow, Spark, MinIO, and PostgreSQL on the same network. Using Spark for hourly small batches is not the most efficient choice — pandas would be enough for this data volume. But the goal was to work with the same tools used in real production pipelines, and to prepare for when the historical traffic volume data gets connected later.
-
-For the Spark image, I first tried the official Apache and Bitnami images for version 3.5.0 — the version I had experience with from a previous project. Both had issues with missing or incompatible jars that I couldn't easily fix. Then I remembered I had already built a custom Spark image on my Docker Hub for a previous project, and that image had all the necessary jars included. I switched to it and everything worked. The project is now more portable — no need to manually mount jars or pass `--jars` flags.
-
-### Security and Git
-
-All credentials and API keys stay in a `.env` file listed in `.gitignore` — never committed. I keep a `.env.example` in the repo so anyone cloning knows exactly what variables to set.
-
-For Git I use two branches: `dev` for daily work and `main` only for stable, tested code. This way I never break the working pipeline while adding new features.
-
----
-
-## What's next
-
-- Grafana dashboard for weather/traffic correlation
-- Connect live Casablanca data to NYC traffic model
-- Retrain model on Casablanca-specific patterns
+*This branch is frozen for reference. Active development continues on `main`/`dev` with the pandas + GitHub Actions architecture.*
