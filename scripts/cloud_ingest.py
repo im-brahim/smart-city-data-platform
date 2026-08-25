@@ -27,13 +27,13 @@ def clean_env(key: str, default: str = "") -> str:
 # before i upload this updated ingest script
 
 ENDPOINT_URL = clean_env(
-    "S3_ENDPOINT_URL",
+    "B2_ENDPOINT_URL",
     "https://s3.us-east-005.backblazeb2.com"
 )
 
 AWS_ACCESS_KEY_ID = clean_env("B2_ACCESS_KEY_ID")
 AWS_SECRET_ACCESS_KEY = clean_env("B2_SECRET_ACCESS_KEY")
-BUCKET_NAME = clean_env("S3_BUCKET_NAME", "smart-city")
+BUCKET_NAME = clean_env("BUCKET_NAME", "smart-city")
 
 TOMTOM_API_KEY = clean_env("TOMTOM_API_KEY")
 WEATHER_API = clean_env("WEATHER_API")
@@ -203,7 +203,7 @@ def ingest_weather_data(api_url: str):
         s3_key = (f"bronze/weather/{ingested_at}.json")
 
         s3_client = get_s3_client()
-        
+
         s3_client.put_object(
             Bucket=BUCKET_NAME,
             Key=s3_key,
