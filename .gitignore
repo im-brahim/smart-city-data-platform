@@ -2,6 +2,7 @@
 # Personal & Local Files
 # ================================
 .vscode/
+.venv/
 Info.txt
 LEARNING_LOG.md
 COACH_CONTEXT.md
@@ -61,4 +62,3 @@ postgres_data/
 # Office & Generated Files
 # ================================
 *.docx
-*.json

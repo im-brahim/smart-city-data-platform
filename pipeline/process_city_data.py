@@ -16,8 +16,19 @@ from utils.config import (
     B2_BUCKET_NAME, BRONZE_TRAFFIC_PREFIX, BRONZE_WEATHER_PREFIX,
       SILVER_TRAFFIC_PREFIX, SILVER_WEATHER_PREFIX
 )
-# from validate_data import run_validation
 
+def get_and_flattened(s3_client, list_args, flattened_fn):
+        response = s3_client.get_object(list_args)
+        row = response.get("Body").read().decode("utf-8")
+        return flattened_fn(row)
+
+def flattened_weather(record : dict) -> dict:
+    weather_list = record.get("weather") or [{}]
+    return {
+        "main" : record.get("main")
+
+    }
+    pass
 # WEATHER PROCESSING
 def flatten_weather(df):
     """
@@ -29,35 +40,9 @@ def flatten_weather(df):
     Returns:
         Flattened DataFrame with selected columns and derived time features.
     """
-    return df.select(
-        col("ingested_at").cast("timestamp").alias("ingested_at"),
-        col("dt").cast("timestamp").alias("timestamp"),
+    return ()
 
-        # Core weather metrics
-        col("main.temp").alias("temp"),
-        col("main.humidity").alias("humidity"),
-        col("main.pressure").alias("pressure"),
-        col("visibility").alias("visibility"),
-
-        # Wind
-        col("wind.speed").alias("wind_speed"),
-        col("wind.deg").alias("wind_deg"),
-
-        # Sky condition
-        col("weather").getItem(0).getField("main").alias("weather_condition"),
-        col("weather").getItem(0).getField("description").alias("weather_description"),
-        col("clouds.all").alias("cloud_coverage"),
-
-        # Location (fixed single city — cheap to keep as-is, no redundancy concern)
-        col("name").alias("city"),
-        col("coord.lat").alias("latitude"),
-        col("coord.lon").alias("longitude"),
-
-        # Time features (for periodicity + joining against traffic data)
-        hour(col("ingested_at")).alias("hour_of_day"),
-        dayofweek(col("ingested_at")).alias("day_of_week"),
-    )
-
+ 
 # TRAFFIC PROCESSING
 def flatten_traffic(df):
     """
