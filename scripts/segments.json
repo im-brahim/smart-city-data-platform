@@ -1,0 +1,68 @@
+[
+  {
+    "segment_id": "S01",
+    "road_name": "Al Joulane – Al Fida corridor",
+    "latitude": 33.5731, 
+    "longitude": -7.5898,
+    "openlr": "C/qfeBfaghp8KvoSByQafUbzewFtGgk=",
+    "frc": "FRC3",
+    "fow": "FOW3",
+    "length_m": 6620
+  },
+  {
+    "segment_id": "S02",
+    "road_name": "A1 – Northern Regional Gateway",
+    "latitude": 33.65778,
+    "longitude": -7.40915,
+    "openlr": "C/q7ORfvOwETJvsc+Z8BAA==",
+    "frc": "FRC0"
+  },
+  {
+    "segment_id": "S03",
+    "road_name": "A3 – South Regional Gateway",
+    "latitude": 33.49448,
+    "longitude": -7.62917,
+    "openlr": "C/qU0he+qQEfzvzNKdkBEA==",
+    "frc": "FRC0"
+  },
+  {
+    "segment_id": "S04",
+    "road_name": "A4",
+    "latitude": 33.29686,
+    "longitude": -7.54799,
+    "openlr": "C/qk5ResAAEdO/NPBHABBg==",
+    "frc": "FRC0"
+  },
+  {
+    "segment_id": "S05",
+    "road_name": "RN1 – Western Gateway",
+    "latitude": 33.46284,
+    "longitude": -7.79746,
+    "openlr": "C/p0cxfLsAokQQ6oBXYMEw==",
+    "frc": "FRC1"
+  },
+  {
+    "segment_id": "S06",
+    "road_name": "RR320 – Bd Abdelhadi Boutaleb",
+    "latitude": 33.55417,
+    "longitude": -7.73121,
+    "openlr": "C/p/7Bfb6RJEoyOEDiYUEg==",
+    "frc": "FRC2"
+  },
+  {
+    "segment_id": "S07",
+    "road_name": "Bd Brahim Raoudani",
+    "latitude": 33.571718,
+    "longitude": -7.642182,
+    "openlr": "C/qQaBfepBJAKwXGB18SEw==",
+    "frc": "FRC2"
+  },
+  {
+    "segment_id": "S08",
+    "road_name": "Route d'Azmour",
+    "latitude": 33.63766,
+    "longitude": -7.44906,
+    "openlr": "C/q3zhfyJxpvUfdl8QAaAQ==",
+    "frc": "FRC3"
+  }
+]
