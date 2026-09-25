@@ -21,7 +21,7 @@ jobs:
             - name: Install Dependencies
               run: |
                 python -m pip install --upgrade pip
-                pip install boto3==1.43.62 pandas==3.0.5
+                pip install boto3==1.43.62 pandas==3.0.5 python-dotenv
     
             - name: Import Cloud Envirnements & Run Python Script
               env:
