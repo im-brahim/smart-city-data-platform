@@ -64,32 +64,39 @@ def flatten_traffic(records: list) -> pd.DataFrame:
 
 
 def process_data(s3_client, source, watermark_key, bronze_prefix, silver_prefix, flatten_data, NbrFile):
-    logger = get_logger("Process Data Function ")
+    logger = get_logger(f"Process Data Function  for {watermark_key} ")
+
     # ----------------- Watermar Logic --------------
     watermarks = get_watermarks(s3_client,source, watermark_key)
     watermark = watermarks.get(watermark_key)
-    if watermark:
+    if watermark and source == "traffic":
         start_after_key = f'{bronze_prefix}/{watermark_key}/{watermark}.json'
-        logger.info(f" The last Watermark is {watermark} for {source} -> {watermark_key}")
+        logger.info(f" The last Watermark for {source} is {watermark} -> {watermark_key}")
+
+    elif watermark and source == "weather":
+        start_after_key = f'{bronze_prefix}/{watermark}.json'
+        logger.info(f" The last Watermark for {source} is {watermark} -> {watermark_key}")
+
     else:
         logger.info(f" No watermark Yet for {source} -> {watermark_key}")
         start_after_key = ""
-    # ---------------------- Separate Sources -------------------
+        
     if source == "traffic":
         response = s3_client.list_objects_v2(Bucket=B2_BUCKET_NAME, Prefix=f"{bronze_prefix}/{watermark_key}/",
-                                          MaxKeys=NbrFile, StartAfter=start_after_key)
+                                                          MaxKeys=NbrFile, StartAfter=start_after_key)
+
     elif source == "weather":
         response = s3_client.list_objects_v2(Bucket=B2_BUCKET_NAME, Prefix=f"{bronze_prefix}/",
-                                                  MaxKeys=NbrFile, StartAfter=start_after_key)
+                                                    MaxKeys=NbrFile, StartAfter=start_after_key)
     else:
-        logger.warn("Unknown data Source")
-        return
+        logger.warning("Unknown data Source")
+        return False
 
     # --------------- Construct a List of Keys-paths if there is Some new files -------------
     contents = response.get("Contents", [])
     if not contents:
-        logger.info("No new objects to process.")
-        return
+        logger.warning(f"No new objects to process for {source}.")
+        return False
     
     keys = [obj['Key'] for obj in contents]
     # ------- get the object from the Keys as a List --------
@@ -124,7 +131,8 @@ def process_data(s3_client, source, watermark_key, bronze_prefix, silver_prefix,
         )
         # ----- after Successful Load update the Watermark -------
         set_watermark(s3_client,source, watermark_key, ts)
-        logger.info(f" Success Upload and Update -- {source}: watermar_key: {watermark_key} Watermark_ts: {ts}")
+        logger.info(f" Success Upload and Update --> {source}: watermar_key: {watermark_key} Watermark_ts: {ts}")
+        # TODO: ts return 2026:08:25T19:04:21 instead of 19-04-21
 
     except Exception as e:
         logger.error(f" Failed for {watermark_key} --- : {e}", exc_info=True)
@@ -135,6 +143,7 @@ def main():
     logger = get_logger(" Main Funtion ")
     s3_client = get_client()
 
+    nmbFileToProcess = 2
     # ------------------------ Traffic -------------------------
     bronze_traffic = f"{BRONZE}/traffic"
     silver_traffic = f"{SILVER}/traffic"
@@ -142,17 +151,17 @@ def main():
     for i in range(1,9):
         segment_id = f"S{i:02d}"
         try:
-            process_data(
+            was_processed = process_data(
                 s3_client,
                 "traffic",
                 segment_id,
                 bronze_traffic,
                 silver_traffic, 
                 flatten_traffic,
-                NbrFile=50
+                NbrFile=nmbFileToProcess
                 )
-
-            logger.info(f" {segment_id} road processed successfully. ")
+            if was_processed:
+                logger.info(f" {segment_id} road processed successfully. ")
 
         except Exception as e:
             logger.error(f"Processing failed for {segment_id}: {e}")
@@ -162,17 +171,17 @@ def main():
     bronze_weather = f"{BRONZE}/weather"
     silver_weather = f"{SILVER}/weather"
     try:
-        process_data(
+        was_processed = process_data(
             s3_client, 
             "weather",
             "weather",
             bronze_weather,
             silver_weather,
             flatten_weather,
-            NbrFile = 50
+            NbrFile = nmbFileToProcess
             )
-
-        logger.info(f" Weather processed successfully. ")
+        if was_processed:
+            logger.info(f" Weather processed successfully. ")
 
     except Exception as e:
         logger.error(f"Process Weather Failed: {e}")
