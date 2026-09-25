@@ -1,64 +1,28 @@
-# ================================
-# Personal & Local Files
-# ================================
 .vscode/
 .venv/
-Info.txt
-LEARNING_LOG.md
-COACH_CONTEXT.md
-jobs/scripts_test/
 debug.py
+traffic
+test.py
+validate_data.py
+save_to_db.py
+daily_process.yml
+.github
+.github/workflows/
 
-# ================================
-# Data & Output Folders
-# ================================
-data/
-data-output/
+
 TRAFFIC FLOW/
-work/
 
 
-# ================================
 # Secrets & Environment
-# ================================
 .env
 .env.local
 
-# ================================
 # Python
-# ================================
 *.pyc
 *.pyo
 __pycache__/
 
-# ================================
 # Jupyter Notebooks
-# ================================
 *.ipynb
 .ipynb_checkpoints/
 notebooks/*.ipynb
-
-# ================================
-# Docker
-# ================================
-docker-compose.override.yml
-*.log
-*.bak
-*.swp
-
-
-# ================================
-# Airflow
-# ================================
-airflow.db
-airflow-logs/
-
-# ================================
-# Storage Data (MinIO / Postgres)
-# ================================
-postgres_data/
-
-# ================================
-# Office & Generated Files
-# ================================
-*.docx
