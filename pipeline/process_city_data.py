@@ -65,7 +65,7 @@ def flatten_traffic(records: list) -> pd.DataFrame:
 
 def process_data(s3_client, source, watermark_key, bronze_prefix, silver_prefix, flatten_data, NbrFile):
     logger = get_logger("Process Data Function ")
-
+    # ----------------- Watermar Logic --------------
     watermarks = get_watermarks(s3_client,source)
     watermark = watermarks.get(watermark_key)
     if watermark:
@@ -74,7 +74,7 @@ def process_data(s3_client, source, watermark_key, bronze_prefix, silver_prefix,
     else:
         logger.info(f" No watermark Yet for {source} -> {watermark_key}")
         start_after_key = ""
-    
+    # ---------------------- Separate Sources -------------------
     if source == "traffic":
         response = s3_client.list_objects_v2(Bucket=B2_BUCKET_NAME, Prefix=f"{bronze_prefix}/{watermark_key}/",
                                           MaxKeys=NbrFile, StartAfter=start_after_key)
@@ -84,14 +84,15 @@ def process_data(s3_client, source, watermark_key, bronze_prefix, silver_prefix,
     else:
         logger.warn("Unknown data Source")
         return
-    
+
+    # --------------- Construct a List of Keys-paths if there is Some new files -------------
     contents = response.get("Contents", [])
     if not contents:
         logger.info("No new objects to process.")
         return
     
     keys = [obj['Key'] for obj in contents]
-
+    # ------- get the object from the Keys as a List --------
     records = []
     for key in keys:
         resp = s3_client.get_object(Bucket=B2_BUCKET_NAME, Key=key)
@@ -104,6 +105,7 @@ def process_data(s3_client, source, watermark_key, bronze_prefix, silver_prefix,
     try:
         df = flatten_data(records)
 
+        # Use in Memorry for parquet if the Flattened work
         buffer = io.BytesIO()
         df.to_parquet(buffer, engine="pyarrow")
 
@@ -113,39 +115,68 @@ def process_data(s3_client, source, watermark_key, bronze_prefix, silver_prefix,
         year = ts.split('T')[0].split('-')[0]
         month = ts.split('T')[0].split('-')[1]
 
+        # ------ Load the Parquet to Silver -------
         s3_client.put_object(
         Bucket=B2_BUCKET_NAME,
         Key= f"{silver_prefix}/{watermark_key}/{year}-{month}/{ts}.parquet",
         Body=buffer.getvalue(),
         ContentType='application/vnd.apache.parquet'
         )
-
+        # ----- after Successful Load update the Watermark -------
         set_watermark(s3_client,source, watermark_key, ts)
         logger.info(f" Success Upload and Update -- {source}: watermar_key: {watermark_key} Watermark_ts: {ts}")
 
     except Exception as e:
         logger.error(f" Failed for {watermark_key} --- : {e}", exc_info=True)
-    
+        raise
 
 def main():
-    
     load_dotenv()
     logger = get_logger(" Main Funtion ")
     s3_client = get_client()
 
+    # ------------------------ Traffic -------------------------
     bronze_traffic = f"{BRONZE}/traffic"
     silver_traffic = f"{SILVER}/traffic"
-    # for i in range(1,9):
-        # segment_id = "S0" + str(i)
-    # process_data(s3_client, "traffic", "S01" , bronze_traffic, silver_traffic, flatten_traffic,4)
-    #     # logger.info(f" {i}/8  roads processed successfully. ")
-    # logger.info(" Successfull road processed. ")
+
+    for i in range(1,9):
+        segment_id = f"S{i:02d}"
+        try:
+            process_data(
+                s3_client,
+                "traffic",
+                segment_id,
+                bronze_traffic,
+                silver_traffic, 
+                flatten_traffic,
+                NbrFile=50
+                )
+
+            logger.info(f" {segment_id} road processed successfully. ")
+
+        except Exception as e:
+            logger.error(f"Processing failed for {segment_id}: {e}")
+            raise
 
     # ------------------------ Weather -------------------------
     bronze_weather = f"{BRONZE}/weather"
     silver_weather = f"{SILVER}/weather"
-    process_data(s3_client, "weather", "weather", bronze_weather, silver_weather, flatten_weather,NbrFile = 4)
-    logger.info(f" Weather processed successfully. ")
+    try:
+        process_data(
+            s3_client, 
+            "weather",
+            "weather",
+            bronze_weather,
+            silver_weather,
+            flatten_weather,
+            NbrFile = 50
+            )
+
+        logger.info(f" Weather processed successfully. ")
+
+    except Exception as e:
+        logger.error(f"Process Weather Failed: {e}")
+        raise
 
 if __name__ == "__main__":
     main()
