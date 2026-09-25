@@ -11,7 +11,7 @@ from utils.config import (
     B2_ACCESS_KEY_ID,
     B2_ENDPOINT_URL,
     B2_SECRET_ACCESS_KEY,
-    WATERMARKS
+    B2_BUCKET_NAME
 )
 
 load_dotenv()
@@ -31,7 +31,7 @@ def get_logger(name):
 def get_watermarks(s3_client,source):
 
     try:
-        respons = s3_client.get_object(Bucket='smart-city', Key=f"{WATERMARKS}/{source}.json")
+        respons = s3_client.get_object(Bucket=B2_BUCKET_NAME, Key=f"watermark/{source}.json")
         content = respons['Body'].read().decode('utf-8')
         watermarks = json.loads(content)
         return watermarks
@@ -49,7 +49,7 @@ def set_watermark(s3_client,source, segemnt_id, ts):
     
     return s3_client.put_object(
         Bucket='smart-city',
-        Key=f"{WATERMARKS}/{source}.json", 
+        Key=f"watermark/{source}.json", 
         Body=json.dumps(watermark).encode("utf-8"),
         ContentType="application/json")
 

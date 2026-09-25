@@ -5,9 +5,7 @@ traffic
 test.py
 validate_data.py
 save_to_db.py
-daily_process.yml
-.github
-.github/workflows/
+hourly_ingest.yml
 
 
 TRAFFIC FLOW/
