@@ -2,7 +2,7 @@ name: Smart City Daily Data Processing
 
 on:
     schedule:
-        - cron: 0 0 * * *   
+        - cron: 0 2 * * *   
     workflow_dispatch: 
 
 jobs:
@@ -23,7 +23,7 @@ jobs:
                 python -m pip install --upgrade pip
                 pip install boto3==1.43.62 pandas==3.0.5 python-dotenv pyarrow==25.0.0
     
-            - name: Import Cloud Envirnements & Run Python Script
+            - name: Run Process City Data Script
               env:
                 B2_ENDPOINT_URL: ${{ secrets.S3_ENDPOINT_URL }}
                 B2_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
