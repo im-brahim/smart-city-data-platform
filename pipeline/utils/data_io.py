@@ -28,10 +28,10 @@ def get_logger(name):
     logging.basicConfig(level=logging.INFO)
     return logging.getLogger(name)
 
-def get_watermarks(s3_client,source):
+def get_watermarks(s3_client,source, watermark_key):
 
     try:
-        respons = s3_client.get_object(Bucket=B2_BUCKET_NAME, Key=f"watermark/{source}.json")
+        respons = s3_client.get_object(Bucket=B2_BUCKET_NAME, Key=f"watermark/{source}/{watermark_key}.json")
         content = respons['Body'].read().decode('utf-8')
         watermarks = json.loads(content)
         return watermarks
@@ -43,13 +43,13 @@ def get_watermarks(s3_client,source):
             raise 
 
 
-def set_watermark(s3_client,source, segemnt_id, ts):
-    watermark = get_watermarks(s3_client,source)
-    watermark[segemnt_id] = ts
+def set_watermark(s3_client,source, watermark_key, ts):
+    watermark = get_watermarks(s3_client,source,watermark_key)
+    watermark[watermark_key] = ts
     
     return s3_client.put_object(
         Bucket='smart-city',
-        Key=f"watermark/{source}.json", 
+        Key=f"watermark/{source}/{watermark_key}.json", 
         Body=json.dumps(watermark).encode("utf-8"),
         ContentType="application/json")
 

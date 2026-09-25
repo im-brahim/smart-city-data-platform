@@ -66,7 +66,7 @@ def flatten_traffic(records: list) -> pd.DataFrame:
 def process_data(s3_client, source, watermark_key, bronze_prefix, silver_prefix, flatten_data, NbrFile):
     logger = get_logger("Process Data Function ")
     # ----------------- Watermar Logic --------------
-    watermarks = get_watermarks(s3_client,source)
+    watermarks = get_watermarks(s3_client,source, watermark_key)
     watermark = watermarks.get(watermark_key)
     if watermark:
         start_after_key = f'{bronze_prefix}/{watermark_key}/{watermark}.json'
