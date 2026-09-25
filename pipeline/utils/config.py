@@ -8,10 +8,9 @@ B2_ENDPOINT_URL = os.getenv("B2_ENDPOINT_URL")
 B2_ACCESS_KEY_ID = os.getenv("B2_ACCESS_KEY_ID")
 B2_SECRET_ACCESS_KEY = os.getenv("B2_SECRET_ACCESS_KEY") 
 B2_BUCKET_NAME = "smart-city"
-BRONZE_WEATHER_PREFIX = "bronze/weather/"
-BRONZE_TRAFFIC_PREFIX = "bronze/traffic/"
-SILVER_WEATHER_PREFIX = "silver/weather/"
-SILVER_TRAFFIC_PREFIX = "silver/traffic/"
+BRONZE = "bronze"
+SILVER = "silver"
+WATERMARKS = "watermarks"
 
 # DATABASE: CONFIGURATION:
 DB_URL = "jdbc:postgresql://postgres:5432/smartcity"
