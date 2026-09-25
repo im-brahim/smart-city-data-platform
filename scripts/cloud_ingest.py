@@ -23,9 +23,6 @@ def clean_env(key: str, default: str = "") -> str:
 # Configuration
 # ============================================================
 
-#TODO: i need to change the secret in the VM to B2* instead aws* for the credentials
-# before i upload this updated ingest script
-
 ENDPOINT_URL = clean_env(
     "B2_ENDPOINT_URL",
     "https://s3.us-east-005.backblazeb2.com"
@@ -238,7 +235,7 @@ if __name__ == "__main__":
 
     with open (SEGMENTS_FILE, "r") as f:
         segments = json.load(f)
-
+# TODO: add new valid segments road to the segments.json file to ingesting
     for segment in segments:
         ingest_traffic_segment(
             segment["segment_id"],
