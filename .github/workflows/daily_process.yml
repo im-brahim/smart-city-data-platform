@@ -25,10 +25,10 @@ jobs:
     
             - name: Import Cloud Envirnements & Run Python Script
               env:
-                S3_ENDPOINT_URL: ${{ secrets.S3_ENDPOINT_URL }}
-                AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-                AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-                S3_BUCKET_NAME: ${{ secrets.S3_BUCKET_NAME }}
+                B2_ENDPOINT_URL: ${{ secrets.S3_ENDPOINT_URL }}
+                B2_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+                B2_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+                B2_BUCKET_NAME: ${{ secrets.S3_BUCKET_NAME }}
               run: |
                 python pipeline/process_city_data.py
 
