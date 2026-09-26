@@ -112,38 +112,45 @@ def process_data(s3_client, source, watermark_key, bronze_prefix, silver_prefix,
     try:
         df = flatten_data(records)
 
-        # Use in Memorry for parquet if the Flattened work
-        buffer = io.BytesIO()
-        df.to_parquet(buffer, engine="pyarrow")
+        # Construct a Grouped DataFrame By Year & Month
+        df_groubed_by_year_month = df.groupby( [ df["ingested_at"].dt.year , df["ingested_at"].dt.month ] )
 
-        # extract the timestamp, year, month as string from the last processed record 
-        last_record_processed = keys[-1].split('/')[-1].split('.')[0]
-        ts = last_record_processed
-        year = ts.split('T')[0].split('-')[0]
-        month = ts.split('T')[0].split('-')[1]
+        # A Tuple (year, month) Looping in DataFrame Grouped By Year & Month
+        # with the Coresspanding data (group_df)
+        for (year, month), group_df in df_groubed_by_year_month:
+            
+            # Use in Memorry for parquet if the Flattened function work
+            buffer = io.BytesIO()
 
-        # ------ Load the Parquet to Silver -------
-        s3_client.put_object(
-        Bucket=B2_BUCKET_NAME,
-        Key= f"{silver_prefix}/{watermark_key}/{year}-{month}/{ts}.parquet",
-        Body=buffer.getvalue(),
-        ContentType='application/vnd.apache.parquet'
-        )
-        # ----- after Successful Load update the Watermark -------
-        set_watermark(s3_client,source, watermark_key, ts)
-        logger.info(f" Success Upload and Update --> {source}: watermar_key: {watermark_key} Watermark_ts: {ts}")
-        # TODO: ts return 2026:08:25T19:04:21 instead of 19-04-21
+            # Transform The Dataframe of a Specific Year and Month to Parquet
+            group_df.to_parquet(buffer, engine="pyarrow")
 
+            # Extract the Last Timestamps to Use it for Updating the Watermark,
+            # And To Naming the Key (Path) of the batche Processing - Silver
+            ts = group_df["ingested_at"].max().strftime("%Y-%m-%dT%H:%M:%S")
+
+            # ------ Load the Parquet to Silver -------
+            s3_client.put_object(
+            Bucket=B2_BUCKET_NAME,
+            Key= f"{silver_prefix}/{watermark_key}/{year}-{month:02d}/{ts}.parquet",
+            Body=buffer.getvalue(),
+            ContentType='application/vnd.apache.parquet'
+            )
+            # ----- after Successful Load update the Watermark -------
+            set_watermark(s3_client,source, watermark_key, ts)
+            logger.info(f"Successflly Upload {len(group_df)} rows to {silver_prefix}/{watermark_key}/{year}-{month:02d}/{ts}.parquet")
+            logger.info(f"The Last watermark track For {source}/{watermark_key} is : {ts}")
     except Exception as e:
         logger.error(f" Failed for {watermark_key} --- : {e}", exc_info=True)
         raise
+
 
 def main():
     load_dotenv()
     logger = get_logger(" Main Funtion ")
     s3_client = get_client()
 
-    nmbFileToProcess = 2
+    nmbFileToProcess = 50
     # ------------------------ Traffic -------------------------
     bronze_traffic = f"{BRONZE}/traffic"
     silver_traffic = f"{SILVER}/traffic"
