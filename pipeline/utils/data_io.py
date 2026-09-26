@@ -2,12 +2,9 @@ import boto3    #type: ignore
 import logging
 import json
 
-# import psycopg2     #type: ignore
 from botocore.exceptions import ClientError
 from dotenv import load_dotenv  # type: ignore
 from utils.config import (
-    # DB_DRIVER,
-    # DB_URL,
     B2_ACCESS_KEY_ID,
     B2_ENDPOINT_URL,
     B2_SECRET_ACCESS_KEY,
@@ -27,6 +24,7 @@ def get_logger(name):
     """
     logging.basicConfig(level=logging.INFO)
     return logging.getLogger(name)
+
 
 def get_watermarks(s3_client,source, watermark_key):
 
@@ -48,7 +46,7 @@ def set_watermark(s3_client,source, watermark_key, ts):
     watermark[watermark_key] = ts
     
     return s3_client.put_object(
-        Bucket='smart-city',
+        Bucket=B2_BUCKET_NAME,
         Key=f"watermark/{source}/{watermark_key}.json", 
         Body=json.dumps(watermark).encode("utf-8"),
         ContentType="application/json")
@@ -62,45 +60,4 @@ def get_client():
         aws_secret_access_key=B2_SECRET_ACCESS_KEY,
     )
 
-
-# ------- Postgre -----
-# def get_track(source):
-#     conn = psycopg2.connect(
-#         host="postgres",
-#         dbname="smartcity",
-#         user=os.getenv("DB_USER"),
-#         password=os.getenv("DB_PASSWORD"), 
-#     )    
-#     try:
-#         with conn:
-#             with conn.cursor() as cur:
-#                 query = """   select source, last_processed from pipeline_track where source = %s   """
-#                 cur.execute(query, (source,))
-#                 result = cur.fetchone()
-#     finally:
-#         conn.close()
-#     return result
-
-# ------- Postgre -----        
-# def update_track(source, ts):
-#     conn = psycopg2.connect(
-#         host="postgres",
-#         dbname="smartcity",
-#         user=os.getenv("DB_USER"),
-#         password=os.getenv("DB_PASSWORD"),
-#     )
-#     try:
-#         with conn:
-#             with conn.cursor() as cur:
-
-#                 query = """
-#                         INSERT INTO pipeline_track (source, last_processed)
-#                         VALUES (%s, %s)
-#                         ON CONFLICT (source)
-#                         DO UPDATE SET last_processed = EXCLUDED.last_processed
-#                         """
-#                 data = (source, ts)
-#                 cur.execute(query,data)       
-#     finally:
-#         conn.close()
 
