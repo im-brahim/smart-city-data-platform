@@ -17,7 +17,7 @@ def flatten_weather(records):
         "temp":                 [r["main"]["temp"] for r in records],
         "humidity":             [r["main"]["humidity"] for r in records],
         "pressure":             [r["main"]["pressure"] for r in records],
-        "visibility":           [r["visibility"] for r in records],
+        "visibility":           [r.get("visibility" , float("nan") ) for r in records],
         "wind_speed":           [r["wind"]["speed"] for r in records],
         "wind_deg":             [r["wind"]["deg"] for r in records],
         "weather_condition":    [r["weather"][0]["main"] for r in records],
@@ -37,7 +37,7 @@ def flatten_weather(records):
 
 # -------------------- TRAFFIC PROCESSING ------------------
 # records = the List of the json TRAFFIC from B2 [{},{}...]    
-def flatten_traffic(records: list) -> pd.DataFrame:
+def flatten_traffic(records: list):
     df = pd.DataFrame({
         "ingested_at":         [r["ingested_at"] for r in records],
         "road_class":          [r["flowSegmentData"]["frc"] for r in records],
